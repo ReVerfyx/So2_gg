@@ -1,4 +1,4 @@
-.gradle/
-**/build/
-local.properties
-*.jks
+build/
+sourcemap.json
+*.rbxl
+*.rbxlx

@@ -1,68 +1,16 @@
-# Aim Prototype — Android без root
+# 2015: CODE ROT
 
-Экспериментальный исходный проект, не проверенная автонаводка для Standoff 2.
+Roblox campaign project built with Rojo.
 
-## Реализовано
+- Start Place ID: `79281925900541`
+- 10 chapters
+- World mutation pulse: every 180 seconds
+- Campaign timer total: 450 minutes (7.5 hours)
+- Player-built parts can return as corrupted geometry in later chapters
+- Five memory fragments, memorial sequence, Rose of Memory revive
 
-- Захват полного экрана после системного разрешения; постоянное уведомление с остановкой.
-- Локальное распознавание одной фигуры через встроенную ML Kit Pose Detection.
-- Голова: нос; тело: центр плеч и бёдер; ноги: середина коленей.
-- Порог уверенности, радиус захвата, коэффициент и ограничение движения.
-- Автоматическое движение прицела через AccessibilityService после включения AIM.
-- Необязательный автовыстрел при совпадении выбранной точки с центром экрана.
-- «Очередь»: повторяющиеся 80-мс нажатия огня и движение вниз каждые 120 мс.
-- Отключение автоматики, если активное окно не принадлежит com.axlebolt.standoff2.
-- Отбрасывание координат старше 350 мс; минимум два близких обнаружения.
-- Остановка захвата при повороте экрана; плавающая перемещаемая панель.
+## Build
+GitHub Actions builds `build/2015-CODE-ROT.rbxlx` on every push to `main`.
+You can also run the workflow manually from the Actions tab.
 
-## Существенные ограничения
-
-Модель обучена распознавать позы людей, а не персонажей Standoff 2. Она может не находить персонажей, ошибаться, выбирать союзников или переключаться на другую фигуру. Обнаружение головы, тела и ног не означает знание игровых хитбоксов. ВХ и получение координат за стенами отсутствуют. Модель выбирает одну заметную фигуру; выбор между несколькими противниками не реализован.
-
-Автоматические жесты могут отменять касания пальцами. AIM и «Очередь» переключаются раздельно и взаимно выключаются. В AIM отдача корректируется только при включённом автовыстреле; обычное ручное нажатие огня не отслеживается. Универсального профиля отдачи нет: это настраиваемое движение вниз, а не точное воспроизведение паттерна оружия. Нет обхода античита или гарантии совместимости с игрой.
-
-Сначала проверяйте обнаружение с выключенной автоматикой. Положение прицела предполагается в центре полного экрана. Захват отдельного приложения, плавающий режим и разделённый экран не поддерживаются. Если Android не предоставляет активное окно игры, управление останется выключенным.
-
-## Получить APK через GitHub Actions
-
-1. Откройте [Actions → Build APK](https://github.com/ReVerfyx/So2_gg/actions/workflows/android.yml).
-2. Выберите Run workflow → main → Run workflow. Сборка также запускается при push в main.
-3. После успешной сборки откройте запуск → Artifacts → AimPrototype-debug.
-4. Распакуйте скачанный архив и установите app-debug.apk на Android 8.0 или новее.
-
-GitHub Actions устанавливает JDK 17, Gradle 8.11.1 и Android SDK 35, запускает unit-тесты, lint и assembleDebug. Используется Android Gradle Plugin 8.9.2. Gradle Wrapper в архиве отсутствует: workflow устанавливает Gradle самостоятельно. Локальная сборка с теми же компонентами: `gradle testDebugUnitTest lintDebug assembleDebug`.
-
-## Настройка на телефоне
-
-1. Откройте приложение в альбомной ориентации.
-2. Разрешите отображение поверх других окон.
-3. Включите службу Aim Prototype в специальных возможностях Android. Для APK, установленного вручную, система может дополнительно попросить разрешить ограниченные настройки в сведениях о приложении; доступность зависит от прошивки.
-4. Выберите точку тела. Укажите координаты кнопки огня и свободной области обзора в процентах полной ширины/высоты экрана. Эти две области должны быть разными и не пересекаться с джойстиком или плавающей панелью.
-5. Начните с коэффициента 0.15, радиуса 25%, уверенности 0.8. Если прицел уходит от фигуры, поменяйте знак коэффициента. Подбирайте величину под чувствительность игры.
-6. Нажмите «Сохранить и запустить захват», разрешите захват всего экрана. Откройте игру вручную.
-7. Переместите панель за строку статуса подальше от кнопок. Проверьте, появляется ли сообщение «Фигура найдена». Затем включите AIM. Для макроса вместо AIM включите «Очередь».
-8. «Стоп» в панели, уведомление или кнопка в приложении прекращают работу. Перед изменением настроек остановите службу и запустите снова.
-
-## Проверка этой поставки
-
-Проверена структура XML и YAML. В локальной Java-среде успешно выполнены 8 проверок отбрасывания устаревших/некорректных целей и ограничения движений. Полная сборка, unit-тесты JUnit и lint выполняются в GitHub Actions. Работа на устройстве и точность в Standoff 2 не проверены.
-
-## Структура
-
-- `.github/workflows/android.yml` — сборка и выдача APK.
-- `settings.gradle`, `build.gradle`, `gradle.properties` — конфигурация проекта.
-- `app/build.gradle` — Android-модуль и ML Kit.
-- `app/src/main/AndroidManifest.xml` — службы и разрешения.
-- `app/src/main/res/xml/accessibility.xml` — настройки службы жестов.
-- `app/src/main/res/values/strings.xml` — описание разрешения.
-- `app/src/main/java/studio/reverfyx/aimprototype/MainActivity.java` — настройки.
-- `app/src/main/java/studio/reverfyx/aimprototype/CaptureService.java` — захват, модель, панель.
-- `app/src/main/java/studio/reverfyx/aimprototype/TouchService.java` — проверка активного приложения, жесты.
-- `app/src/main/java/studio/reverfyx/aimprototype/AimMath.java` — расчёт коррекции и фильтры.
-- `app/src/test/java/studio/reverfyx/aimprototype/AimMathTest.java` — unit-тесты.
-
-## Документация
-
-- https://developers.google.com/ml-kit/vision/pose-detection/android
-- https://developer.android.com/media/grow/media-projection
-- https://developer.android.com/reference/android/accessibilityservice/AccessibilityService
+Automatic upload to the Roblox place is intentionally not enabled until a Roblox Open Cloud API key and Universe ID are configured as GitHub secrets.
