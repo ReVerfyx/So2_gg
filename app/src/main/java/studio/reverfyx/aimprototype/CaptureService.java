@@ -51,7 +51,7 @@ public class CaptureService extends Service {
  }
  float setting(String key,float fallback){return prefs.getFloat(key,fallback);}
  void overlay(){
-  panel=new LinearLayout(this);panel.setOrientation(1);panel.setPadding(8,4,8,4);panel.setBackgroundColor(0xdd16202b);
+  panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(8,4,8,4);panel.setBackgroundColor(0xdd16202b);
   status=new TextView(this);status.setTextColor(Color.WHITE);status.setTextSize(11);panel.addView(status);
   LinearLayout row=new LinearLayout(this);panel.addView(row);
   aimButton=new Button(this);aimButton.setTextSize(10);row.addView(aimButton);aimButton.setOnClickListener(v->{armed=!armed;burst=false;});

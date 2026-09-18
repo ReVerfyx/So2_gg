@@ -17,7 +17,7 @@ public class MainActivity extends Activity {
   super.onCreate(b);
   getWindow().getDecorView().setSystemUiVisibility(5894);
   prefs=getSharedPreferences("config",0);
-  LinearLayout col=new LinearLayout(this); col.setOrientation(1); col.setPadding(28,16,28,20);
+  LinearLayout col=new LinearLayout(this); col.setOrientation(LinearLayout.VERTICAL); col.setPadding(28,16,28,20);
   ScrollView scroll=new ScrollView(this); scroll.addView(col); setContentView(scroll);
   TextView title=new TextView(this); title.setText("Aim Prototype • эксперимент"); title.setTextSize(24); col.addView(title);
   TextView info=new TextView(this); info.setText("Модель ищет одну фигуру, не различает команды и не обучена Standoff 2. ВХ отсутствует. Автожесты прерывают ручные касания. Сначала проверьте обнаружение с выключенным AIM. Кадры не сохраняются."); col.addView(info);
