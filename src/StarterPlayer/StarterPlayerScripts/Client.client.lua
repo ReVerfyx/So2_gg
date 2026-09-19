@@ -143,6 +143,27 @@ local function stroke(obj,trans)
     s.Thickness=1
     s.Parent=obj
 end
+local function gradient(obj,a,b,rotation)
+    local g=Instance.new("UIGradient")
+    g.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,a),
+        ColorSequenceKeypoint.new(1,b)
+    })
+    g.Rotation=rotation or 90
+    g.Parent=obj
+    return g
+end
+local function accent(parent,color)
+    local a=Instance.new("Frame")
+    a.Name="Accent"
+    a.Size=UDim2.new(0,4,1,-16)
+    a.Position=UDim2.fromOffset(7,8)
+    a.BackgroundColor3=color
+    a.BorderSizePixel=0
+    corner(a,3)
+    a.Parent=parent
+    return a
+end
 local function txt(parent,name,text,pos,size,textSize)
     local x=Instance.new("TextLabel")
     x.Name=name
@@ -162,63 +183,75 @@ local function panel(parent,name,pos,size)
     f.Name=name
     f.Position=pos
     f.Size=size
-    f.BackgroundColor3=Color3.fromRGB(19,21,27)
-    f.BackgroundTransparency=.15
+    f.BackgroundColor3=Color3.fromRGB(24,26,34)
+    f.BackgroundTransparency=.08
     f.BorderSizePixel=0
     corner(f,12)
-    stroke(f,.55)
+    stroke(f,.5)
+    gradient(f,Color3.fromRGB(33,35,46),Color3.fromRGB(18,20,26),90)
     f.Parent=parent
     return f
 end
 
 -- Lobby UI is intentionally minimal.
 local lobbyHint=panel(gui,"LobbyHint",UDim2.new(.5,-220,1,-82),UDim2.fromOffset(440,50))
-local lobbyHintText=txt(lobbyHint,"Text",tr("lobby_hint"),UDim2.fromOffset(14,5),UDim2.new(1,-28,1,-10),15)
+accent(lobbyHint,Color3.fromRGB(232,170,93))
+local lobbyHintText=txt(lobbyHint,"Text",tr("lobby_hint"),UDim2.fromOffset(20,5),UDim2.new(1,-34,1,-10),15)
+lobbyHintText.TextXAlignment=Enum.TextXAlignment.Left
 
 local topRight=panel(gui,"TopRight",UDim2.new(1,-190,0,12),UDim2.fromOffset(178,44))
-local bitsText=txt(topRight,"Bits","0 Bits",UDim2.fromOffset(10,0),UDim2.fromOffset(100,44),15)
+accent(topRight,Color3.fromRGB(116,189,137))
+local bitsText=txt(topRight,"Bits","0 Bits",UDim2.fromOffset(18,0),UDim2.fromOffset(92,44),15)
 bitsText.TextXAlignment=Enum.TextXAlignment.Left
 local langButton=Instance.new("TextButton")
 langButton.Size=UDim2.fromOffset(54,32)
 langButton.Position=UDim2.new(1,-62,.5,-16)
-langButton.BackgroundColor3=Color3.fromRGB(59,63,77)
+langButton.BackgroundColor3=Color3.fromRGB(69,73,91)
 langButton.TextColor3=Color3.fromRGB(255,255,255)
 langButton.Font=Enum.Font.GothamBold
 langButton.TextSize=15
 langButton.Text=localeNames[lang]
 corner(langButton,8)
+stroke(langButton,.55)
+gradient(langButton,Color3.fromRGB(82,88,109),Color3.fromRGB(52,56,70),90)
 langButton.Parent=topRight
 
 -- Round HUD.
 local chapterBox=panel(gui,"ChapterBox",UDim2.fromOffset(12,12),UDim2.fromOffset(360,52))
-local chapterText=txt(chapterBox,"Text","2015: CODE ROT",UDim2.fromOffset(14,0),UDim2.new(1,-28,1,0),17)
+accent(chapterBox,Color3.fromRGB(179,93,221))
+local chapterText=txt(chapterBox,"Text","2015: CODE ROT",UDim2.fromOffset(20,0),UDim2.new(1,-34,1,0),17)
 chapterText.TextXAlignment=Enum.TextXAlignment.Left
 
 local objectiveBox=panel(gui,"ObjectiveBox",UDim2.fromOffset(12,70),UDim2.fromOffset(430,72))
-local objectiveHeader=txt(objectiveBox,"Header",tr("objective"),UDim2.fromOffset(14,7),UDim2.fromOffset(130,20),12)
+accent(objectiveBox,Color3.fromRGB(95,156,223))
+local objectiveHeader=txt(objectiveBox,"Header",tr("objective"),UDim2.fromOffset(20,7),UDim2.fromOffset(130,20),12)
 objectiveHeader.TextColor3=Color3.fromRGB(174,178,196)
 objectiveHeader.TextXAlignment=Enum.TextXAlignment.Left
-local objectiveText=txt(objectiveBox,"Text","",UDim2.fromOffset(14,25),UDim2.new(1,-28,1,-31),15)
+local objectiveText=txt(objectiveBox,"Text","",UDim2.fromOffset(20,25),UDim2.new(1,-34,1,-31),15)
 objectiveText.TextXAlignment=Enum.TextXAlignment.Left
 
 local timerBox=panel(gui,"TimerBox",UDim2.new(1,-132,0,64),UDim2.fromOffset(120,44))
-local timerText=txt(timerBox,"Text","--:--",UDim2.fromScale(0,0),UDim2.fromScale(1,1),18)
+accent(timerBox,Color3.fromRGB(229,172,91))
+local timerText=txt(timerBox,"Text","--:--",UDim2.fromOffset(6,0),UDim2.new(1,-6,1,0),18)
 
 local toastBox=panel(gui,"Toast",UDim2.new(.5,-210,0,150),UDim2.fromOffset(420,64))
-local toastText=txt(toastBox,"Text","",UDim2.fromOffset(12,6),UDim2.new(1,-24,1,-12),15)
+accent(toastBox,Color3.fromRGB(192,109,225))
+local toastText=txt(toastBox,"Text","",UDim2.fromOffset(20,6),UDim2.new(1,-32,1,-12),15)
 toastBox.Visible=false
 
 local function makeActionButton(textValue,x)
     local b=Instance.new("TextButton")
     b.Size=UDim2.fromOffset(98,44)
     b.Position=UDim2.new(1,x,1,-58)
-    b.BackgroundColor3=Color3.fromRGB(62,67,78)
+    b.BackgroundColor3=Color3.fromRGB(67,72,87)
     b.TextColor3=Color3.fromRGB(248,248,248)
     b.Font=Enum.Font.GothamBold
     b.TextSize=13
     b.Text=textValue
+    b.AutoButtonColor=true
     corner(b,10)
-    stroke(b,.5)
+    stroke(b,.45)
+    gradient(b,Color3.fromRGB(83,89,108),Color3.fromRGB(49,53,65),90)
     b.Parent=gui
     return b
 end
@@ -287,8 +320,9 @@ local classFrame=nil
 local function openClassMenu(classes,data)
     if classFrame then classFrame:Destroy() end
     classFrame=panel(gui,"ClassMenu",UDim2.new(.5,-250,.5,-210),UDim2.fromOffset(500,420))
+    accent(classFrame,Color3.fromRGB(167,104,218))
 
-    local title=txt(classFrame,"Title",tr("classes"),UDim2.fromOffset(18,12),UDim2.new(1,-100,0,36),24)
+    local title=txt(classFrame,"Title",tr("classes"),UDim2.fromOffset(24,12),UDim2.new(1,-106,0,36),24)
     title.TextXAlignment=Enum.TextXAlignment.Left
 
     local close=Instance.new("TextButton")
@@ -309,10 +343,17 @@ local function openClassMenu(classes,data)
         local info=classes[name]
         if info then
             local card=panel(classFrame,name,UDim2.fromOffset(14,y),UDim2.new(1,-28,0,76))
-            card.BackgroundTransparency=.05
-            local nameLabel=txt(card,"Name",tr("class_"..name),UDim2.fromOffset(12,8),UDim2.new(1,-130,0,24),17)
+            card.BackgroundTransparency=.03
+            local classColors={
+                Archivist=Color3.fromRGB(170,129,214),
+                Builder=Color3.fromRGB(222,165,84),
+                Debugger=Color3.fromRGB(93,168,225),
+                Guest1337=Color3.fromRGB(111,205,139),
+            }
+            accent(card,classColors[name] or Color3.fromRGB(160,160,175))
+            local nameLabel=txt(card,"Name",tr("class_"..name),UDim2.fromOffset(20,8),UDim2.new(1,-138,0,24),17)
             nameLabel.TextXAlignment=Enum.TextXAlignment.Left
-            local desc=txt(card,"Desc",tr("desc_"..name),UDim2.fromOffset(12,31),UDim2.new(1,-130,0,35),13)
+            local desc=txt(card,"Desc",tr("desc_"..name),UDim2.fromOffset(20,31),UDim2.new(1,-138,0,35),13)
             desc.TextColor3=Color3.fromRGB(188,191,202)
             desc.TextXAlignment=Enum.TextXAlignment.Left
 
@@ -326,6 +367,8 @@ local function openClassMenu(classes,data)
             action.TextSize=12
             action.Text=owned and tr("owned") or (tr("buy").."\n"..tostring(info.price).." Bits")
             corner(action,8)
+            stroke(action,.55)
+            gradient(action,owned and Color3.fromRGB(76,122,91) or Color3.fromRGB(111,86,60),owned and Color3.fromRGB(52,87,65) or Color3.fromRGB(73,59,47),90)
             action.Parent=card
             action.Activated:Connect(function()
                 R.ClassAction:FireServer(owned and "Select" or "Buy",name)
@@ -409,7 +452,8 @@ end)
 task.delay(1,function()
     if gui:FindFirstChild("WarningCard") then return end
     local w=panel(gui,"WarningCard",UDim2.new(.5,-230,.5,-100),UDim2.fromOffset(460,200))
-    local wt=txt(w,"Text",tr("content_warning"),UDim2.fromOffset(20,20),UDim2.new(1,-40,0,105),17)
+    accent(w,Color3.fromRGB(223,154,84))
+    local wt=txt(w,"Text",tr("content_warning"),UDim2.fromOffset(28,20),UDim2.new(1,-48,0,105),17)
     local ok=Instance.new("TextButton")
     ok.Size=UDim2.fromOffset(130,42)
     ok.Position=UDim2.new(.5,-65,1,-58)
@@ -419,6 +463,8 @@ task.delay(1,function()
     ok.TextSize=13
     ok.Text=tr("understood")
     corner(ok,9)
+    stroke(ok,.55)
+    gradient(ok,Color3.fromRGB(82,113,91),Color3.fromRGB(52,76,61),90)
     ok.Parent=w
     ok.Activated:Connect(function() w:Destroy() end)
 end)
