@@ -44,10 +44,19 @@ jobs:
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
         run: |
-          curl --silent --show-error --fail-with-body             --request POST "https://apis.roblox.com/api-keys/v1/introspect"             --header "Content-Type: application/json"             --data "{"apiKey":"${ROBLOX_API_KEY}"}"             | jq '{enabled,expired,scopes}'
+          jq -n --arg key "$ROBLOX_API_KEY" '{apiKey:$key}' \
+            | curl --silent --show-error --fail-with-body \
+                --request POST "https://apis.roblox.com/api-keys/v1/introspect" \
+                --header "Content-Type: application/json" \
+                --data-binary @- \
+            | jq '{enabled,expired,scopes}'
 
       - name: Publish to Roblox
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
         run: |
-          curl --fail-with-body --location --request POST             "https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${START_PLACE_ID}/versions?versionType=Published"             --header "x-api-key: ${ROBLOX_API_KEY}"             --header "Content-Type: application/xml"             --data-binary "@build/2015-CODE-ROT.rbxlx"
+          curl --fail-with-body --location --request POST \
+            "https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${START_PLACE_ID}/versions?versionType=Published" \
+            --header "x-api-key: ${ROBLOX_API_KEY}" \
+            --header "Content-Type: application/xml" \
+            --data-binary "@build/2015-CODE-ROT.rbxlx"
