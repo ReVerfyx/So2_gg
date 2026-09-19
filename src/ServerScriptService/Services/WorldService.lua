@@ -101,6 +101,113 @@ local function fenceSection(parent, pos, size)
     return p
 end
 
+
+local function rock(parent, x, z, sx, sy, sz, color)
+    local p=makePart(parent,"Rock",Vector3.new(sx or 6,sy or 4,sz or 6),Vector3.new(x,(sy or 4)/2,z),color or Color3.fromRGB(74,72,74),Enum.Material.Slate)
+    p.Orientation=Vector3.new(math.random(-8,8),math.random(0,180),math.random(-8,8))
+    return p
+end
+
+local function bush(parent,x,z,s)
+    local p=makePart(parent,"Bush",Vector3.new(5,3.5,5)*(s or 1),Vector3.new(x,1.6*(s or 1),z),Color3.fromRGB(42,77,43),Enum.Material.Grass)
+    p.Shape=Enum.PartType.Ball
+    p.CanCollide=false
+    return p
+end
+
+local function bench(parent,x,z,rot)
+    local seat=makePart(parent,"BenchSeat",Vector3.new(8,.7,2.2),Vector3.new(x,2,z),Color3.fromRGB(95,69,47),Enum.Material.WoodPlanks)
+    seat.Orientation=Vector3.new(0,rot or 0,0)
+    local back=makePart(parent,"BenchBack",Vector3.new(8,2.5,.6),Vector3.new(x,3.2,z+((rot or 0)==0 and 1 or 0)),Color3.fromRGB(83,61,43),Enum.Material.WoodPlanks)
+    back.Orientation=seat.Orientation
+end
+
+local function crate(parent,x,y,z,s)
+    local p=makePart(parent,"Crate",Vector3.new(5,5,5)*(s or 1),Vector3.new(x,y,z),Color3.fromRGB(109,78,48),Enum.Material.WoodPlanks)
+    p.Orientation=Vector3.new(0,math.random(0,3)*90,0)
+    return p
+end
+
+local function barrel(parent,x,z,color)
+    local p=makePart(parent,"Barrel",Vector3.new(3.2,5,3.2),Vector3.new(x,2.5,z),color or Color3.fromRGB(72,76,78),Enum.Material.Metal)
+    p.Shape=Enum.PartType.Cylinder
+    p.Orientation=Vector3.new(0,0,90)
+    return p
+end
+
+local function utilityPole(parent,x,z)
+    makePart(parent,"UtilityPole",Vector3.new(1.2,18,1.2),Vector3.new(x,9,z),Color3.fromRGB(78,56,39),Enum.Material.Wood)
+    makePart(parent,"Crossbar",Vector3.new(8,.7,.7),Vector3.new(x,16.5,z),Color3.fromRGB(72,52,38),Enum.Material.Wood)
+    for _,dx in ipairs({-3,0,3}) do
+        local ins=makePart(parent,"Insulator",Vector3.new(.55,.55,.55),Vector3.new(x+dx,17,z),Color3.fromRGB(185,183,163),Enum.Material.SmoothPlastic)
+        ins.Shape=Enum.PartType.Ball
+        ins.CanCollide=false
+    end
+end
+
+local function neonStrip(parent,name,pos,size,color)
+    local p=makePart(parent,name,size,pos,color,Enum.Material.Neon)
+    p.CanCollide=false
+    return p
+end
+
+local function smallCampfire(parent,x,z)
+    for i=1,6 do
+        local a=(i/6)*math.pi*2
+        rock(parent,x+math.cos(a)*3,z+math.sin(a)*3,2,1.5,2,Color3.fromRGB(83,78,72))
+    end
+    local glow=makePart(parent,"CampfireGlow",Vector3.new(2.4,2.4,2.4),Vector3.new(x,2,z),Color3.fromRGB(255,120,54),Enum.Material.Neon)
+    glow.Shape=Enum.PartType.Ball
+    glow.CanCollide=false
+    local li=Instance.new("PointLight")
+    li.Color=Color3.fromRGB(255,143,74)
+    li.Range=26
+    li.Brightness=2.2
+    li.Shadows=true
+    li.Parent=glow
+end
+
+local function setLightingProfile(map)
+    local profiles={
+        Suburb={clock=18.6,bright=1.65,fog=Color3.fromRGB(101,105,119),start=95,finish=500,ambient=Color3.fromRGB(78,80,93),out=Color3.fromRGB(92,87,87),density=.24,haze=1.2,bloom=.16,sat=-.08,contrast=.04,tint=Color3.fromRGB(255,236,216)},
+        ObbyPark={clock=17.7,bright=1.8,fog=Color3.fromRGB(108,112,128),start=110,finish=520,ambient=Color3.fromRGB(82,84,98),out=Color3.fromRGB(102,98,106),density=.2,haze=.9,bloom=.2,sat=-.02,contrast=.06,tint=Color3.fromRGB(244,236,255)},
+        City={clock=20.8,bright=1.35,fog=Color3.fromRGB(62,68,79),start=70,finish=370,ambient=Color3.fromRGB(48,51,62),out=Color3.fromRGB(59,61,70),density=.32,haze=1.5,bloom=.28,sat=-.2,contrast=.1,tint=Color3.fromRGB(211,224,255)},
+        Warehouse={clock=22.3,bright=1.05,fog=Color3.fromRGB(53,55,60),start=55,finish=310,ambient=Color3.fromRGB(43,44,49),out=Color3.fromRGB(52,49,47),density=.35,haze=1.1,bloom=.32,sat=-.25,contrast=.14,tint=Color3.fromRGB(224,216,203)},
+        Canyon={clock=18.0,bright=1.9,fog=Color3.fromRGB(139,105,83),start=120,finish=500,ambient=Color3.fromRGB(103,76,64),out=Color3.fromRGB(130,97,76),density=.18,haze=.8,bloom=.12,sat=-.05,contrast=.06,tint=Color3.fromRGB(255,218,184)},
+        Ocean={clock=19.4,bright=1.5,fog=Color3.fromRGB(58,88,116),start=85,finish=420,ambient=Color3.fromRGB(54,67,83),out=Color3.fromRGB(68,80,98),density=.28,haze=1.35,bloom=.24,sat=-.12,contrast=.07,tint=Color3.fromRGB(209,226,255)},
+        Chat={clock=0.2,bright=.85,fog=Color3.fromRGB(30,31,39),start=45,finish=260,ambient=Color3.fromRGB(30,31,40),out=Color3.fromRGB(39,36,48),density=.42,haze=1.6,bloom=.4,sat=-.25,contrast=.18,tint=Color3.fromRGB(215,200,255)},
+        Forest={clock=1.1,bright=.8,fog=Color3.fromRGB(39,54,48),start=42,finish=250,ambient=Color3.fromRGB(29,42,35),out=Color3.fromRGB(42,55,45),density=.48,haze=1.7,bloom=.18,sat=-.2,contrast=.12,tint=Color3.fromRGB(196,220,202)},
+        Archive={clock=23.7,bright=.7,fog=Color3.fromRGB(27,30,38),start=38,finish=225,ambient=Color3.fromRGB(25,28,34),out=Color3.fromRGB(33,36,42),density=.45,haze=1.25,bloom=.5,sat=-.3,contrast=.2,tint=Color3.fromRGB(190,215,255)},
+        Finale={clock=23.1,bright=.9,fog=Color3.fromRGB(49,37,61),start=50,finish=280,ambient=Color3.fromRGB(43,33,54),out=Color3.fromRGB(55,40,65),density=.4,haze=1.8,bloom=.45,sat=-.18,contrast=.18,tint=Color3.fromRGB(231,202,255)},
+    }
+    local p=profiles[map] or profiles.Finale
+    Lighting.ClockTime=p.clock
+    Lighting.Brightness=p.bright
+    Lighting.Ambient=p.ambient
+    Lighting.OutdoorAmbient=p.out
+    Lighting.FogColor=p.fog
+    Lighting.FogStart=p.start
+    Lighting.FogEnd=p.finish
+    local a=Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
+    a.Density=p.density
+    a.Haze=p.haze
+    a.Color=p.tint
+    a.Decay=p.fog
+    a.Parent=Lighting
+    local bloom=Lighting:FindFirstChild("ChapterBloom") or Lighting:FindFirstChild("LobbyBloom") or Instance.new("BloomEffect")
+    bloom.Name="ChapterBloom"
+    bloom.Intensity=p.bloom
+    bloom.Size=22
+    bloom.Threshold=1.1
+    bloom.Parent=Lighting
+    local cc=Lighting:FindFirstChild("ChapterColor") or Instance.new("ColorCorrectionEffect")
+    cc.Name="ChapterColor"
+    cc.Saturation=p.sat
+    cc.Contrast=p.contrast
+    cc.TintColor=p.tint
+    cc.Parent=Lighting
+end
+
 function WorldService.new(remotes)
     local self=setmetatable({},WorldService)
     self.remotes=remotes
@@ -231,31 +338,89 @@ function WorldService:BuildLobby()
     for _,p in ipairs({{-75,72},{-72,48},{75,72},{72,48},{-76,-72},{76,-72}}) do tree(f,p[1],p[2],.8) end
 
     sign(f,"2015: CODE ROT\nСЕРВЕР ПОМНИТ / THE SERVER REMEMBERS",Vector3.new(0,12,81),Vector3.new(48,10,1),Color3.fromRGB(46,42,45))
+    self:_decorateLobby(f)
+end
+
+function WorldService:_decorateLobby(f)
+    -- Dense edge dressing: the hub should feel like a lived-in camp, not a flat dev base.
+    for x=-76,76,19 do
+        bush(f,x,78,.75)
+        bush(f,x,-78,.8)
+        if x%38==0 then rock(f,x+4,73,5,3,6) end
+    end
+    for z=-62,62,18 do
+        bush(f,-78,z,.7)
+        bush(f,78,z,.75)
+    end
+    bench(f,-18,31,0)
+    bench(f,18,31,180)
+    bench(f,-18,-18,0)
+    bench(f,18,-18,180)
+    crate(f,-69,2.5,-4,1)
+    crate(f,-63,2.5,-2,.8)
+    crate(f,69,2.5,-3,1)
+    barrel(f,65,15,Color3.fromRGB(73,81,84))
+    barrel(f,70,18,Color3.fromRGB(92,68,53))
+    smallCampfire(f,-67,54)
+    utilityPole(f,-78,-52)
+    utilityPole(f,78,-52)
+    sign(f,"НЕ ВЫХОДИ ЗА ОГРАЖДЕНИЕ\nDO NOT CROSS THE FENCE",Vector3.new(0,6,-83),Vector3.new(28,7,1),Color3.fromRGB(63,49,45))
+    for _,p in ipairs({{-58,-63},{58,-63},{-81,25},{81,25},{-42,73},{42,73}}) do
+        rock(f,p[1],p[2],math.random(4,8),math.random(2,5),math.random(4,8))
+    end
 end
 
 function WorldService:GetSpawnPosition()
     return self.spawnPosition
 end
 
-local function addArenaBounds(folder, centerZ)
+local function addArenaBounds(folder, centerZ, map, rng)
     local minZ=centerZ-305
     local maxZ=centerZ+305
+
+    -- Tall invisible collision shell. The visible border below is thematic.
     for _,spec in ipairs({
-        {Vector3.new(0,14,minZ),Vector3.new(620,28,4)},
-        {Vector3.new(0,14,maxZ),Vector3.new(620,28,4)},
-        {Vector3.new(-308,14,centerZ),Vector3.new(4,28,610)},
-        {Vector3.new(308,14,centerZ),Vector3.new(4,28,610)},
+        {Vector3.new(0,32,minZ-3),Vector3.new(626,64,3)},
+        {Vector3.new(0,32,maxZ+3),Vector3.new(626,64,3)},
+        {Vector3.new(-311,32,centerZ),Vector3.new(3,64,626)},
+        {Vector3.new(311,32,centerZ),Vector3.new(3,64,626)},
     }) do
-        local p=makePart(folder,"ArenaBoundary",spec[2],spec[1],Color3.fromRGB(45,43,48),Enum.Material.Slate)
-        p.Transparency=.08
+        local wall=makePart(folder,"InvisibleBoundary",spec[2],spec[1],Color3.new(1,1,1),Enum.Material.SmoothPlastic)
+        wall.Transparency=1
+    end
+
+    local function edgePiece(x,z,side)
+        if map=="Canyon" then
+            rock(folder,x,z,rng:NextInteger(26,42),rng:NextInteger(24,54),rng:NextInteger(22,40),Color3.fromRGB(130,85,58))
+        elseif map=="Warehouse" or map=="Archive" then
+            local p=makePart(folder,"PerimeterWall",side=="x" and Vector3.new(24,18,5) or Vector3.new(5,18,24),Vector3.new(x,9,z),Color3.fromRGB(48,49,54),Enum.Material.Metal)
+            if rng:NextNumber()<.32 then neonStrip(folder,"WarningLamp",Vector3.new(x,15,z),Vector3.new(2,.8,2),Color3.fromRGB(255,92,55)) end
+        elseif map=="City" then
+            local p=makePart(folder,"Barricade",side=="x" and Vector3.new(20,7,5) or Vector3.new(5,7,20),Vector3.new(x,3.5,z),Color3.fromRGB(75,77,82),Enum.Material.Concrete)
+            if rng:NextNumber()<.25 then barrel(folder,x+(side=="x" and 0 or 5),z+(side=="x" and 5 or 0)) end
+        elseif map=="Ocean" then
+            rock(folder,x,z,rng:NextInteger(18,32),rng:NextInteger(8,16),rng:NextInteger(18,32),Color3.fromRGB(62,73,83))
+        elseif map=="Forest" or map=="Suburb" then
+            if rng:NextNumber()<.75 then tree(folder,x,z,rng:NextNumber(.9,1.35)) else rock(folder,x,z,10,6,9) end
+        elseif map=="Chat" or map=="Finale" then
+            local p=makePart(folder,"GlitchBoundary",side=="x" and Vector3.new(24,rng:NextInteger(14,30),5) or Vector3.new(5,rng:NextInteger(14,30),24),Vector3.new(x,9,z),Color3.fromRGB(62,42,84),Enum.Material.Slate)
+            if rng:NextNumber()<.22 then p.Material=Enum.Material.Neon; p.Color=Color3.fromRGB(155,54,220) end
+        else
+            rock(folder,x,z,18,11,16)
+        end
+    end
+
+    for n=-288,288,24 do
+        edgePiece(n,minZ+4,"x")
+        edgePiece(n,maxZ-4,"x")
+        edgePiece(-304,centerZ+n,"z")
+        edgePiece(304,centerZ+n,"z")
     end
 end
 
 function WorldService:_makeBase(folder, chapter, rng)
     self.spawnPosition=Vector3.new(0,4,470)
-    Lighting.ClockTime=18.4
-    Lighting.FogStart=100
-    Lighting.FogEnd=520
+    setLightingProfile(chapter.map)
 
     local palettes={
         Suburb={Color3.fromRGB(67,115,63),Enum.Material.Grass},
@@ -271,7 +436,7 @@ function WorldService:_makeBase(folder, chapter, rng)
     }
     local pal=palettes[chapter.map] or palettes.Finale
     makePart(folder,"Ground",Vector3.new(620,4,620),Vector3.new(0,-2,760),pal[1],pal[2])
-    addArenaBounds(folder,760)
+    addArenaBounds(folder,760,chapter.map,rng)
     sign(folder,chapter.title.."\n"..chapter.subtitle,Vector3.new(0,11,452),Vector3.new(38,10,1))
 
     if chapter.map=="Suburb" then
@@ -335,6 +500,143 @@ function WorldService:_makeBase(folder, chapter, rng)
     end
 end
 
+
+function WorldService:_decorateChapter(folder,chapter,rng)
+    local map=chapter.map
+
+    if map=="Suburb" then
+        for z=520,980,92 do
+            lamp(folder,-28,z)
+            lamp(folder,28,z)
+            if (z%184)<100 then utilityPole(folder,-165,z) else utilityPole(folder,165,z) end
+        end
+        for i=1,18 do
+            local side=(i%2==0) and -1 or 1
+            local z=500+i*28
+            local x=side*rng:NextInteger(52,145)
+            bush(folder,x,z,rng:NextNumber(.55,.95))
+            if i%3==0 then
+                local mb=makePart(folder,"Mailbox",Vector3.new(2.5,3,2.2),Vector3.new(x,1.8,z+3),Color3.fromRGB(74,81,91),Enum.Material.Metal)
+                makePart(folder,"MailboxPost",Vector3.new(.6,2.2,.6),Vector3.new(x,.8,z+3),Color3.fromRGB(87,64,45),Enum.Material.Wood)
+            end
+        end
+        sign(folder,"УЛ. SERVER LIST",Vector3.new(-26,7,610),Vector3.new(15,5,1),Color3.fromRGB(52,60,66))
+        sign(folder,"ШКОЛА  →",Vector3.new(28,7,880),Vector3.new(14,5,1),Color3.fromRGB(58,55,51))
+        crate(folder,135,2.5,930,.8)
+        barrel(folder,143,929)
+    elseif map=="ObbyPark" then
+        for i=1,18 do
+            local x=rng:NextInteger(-255,255)
+            local z=rng:NextInteger(500,1010)
+            local pole=makePart(folder,"FlagPole",Vector3.new(.5,10,.5),Vector3.new(x,5,z),Color3.fromRGB(75,75,78),Enum.Material.Metal)
+            local flag=makePart(folder,"OldFlag",Vector3.new(5,3,.3),Vector3.new(x+2.5,9,z),Color3.fromRGB(180+rng:NextInteger(0,70),70+rng:NextInteger(0,100),80+rng:NextInteger(0,100)),Enum.Material.Fabric)
+            flag.CanCollide=false
+        end
+        sign(folder,"OBBY OF THE YEAR 2015",Vector3.new(-170,10,535),Vector3.new(26,8,1),Color3.fromRGB(88,62,72))
+        sign(folder,"CHECKPOINTS MAY LIE",Vector3.new(170,8,720),Vector3.new(22,7,1),Color3.fromRGB(67,54,77))
+        for i=1,12 do rock(folder,rng:NextInteger(-270,270),rng:NextInteger(490,1020),rng:NextInteger(3,7),rng:NextInteger(2,4),rng:NextInteger(3,7),Color3.fromRGB(89,88,95)) end
+    elseif map=="City" then
+        for z=505,1010,70 do
+            lamp(folder,-52,z)
+            lamp(folder,52,z)
+        end
+        for i=1,14 do
+            local x=(i%2==0) and -185 or 185
+            local z=500+i*35
+            if i%3==0 then bench(folder,x,z,90) else barrel(folder,x,z,Color3.fromRGB(65,70,74)) end
+        end
+        sign(folder,"METRO  ↓",Vector3.new(-85,8,760),Vector3.new(16,6,1),Color3.fromRGB(48,62,76))
+        sign(folder,"LAST ONLINE: 27",Vector3.new(165,12,540),Vector3.new(26,8,1),Color3.fromRGB(48,55,66))
+        for i=1,10 do crate(folder,rng:NextInteger(-245,245),2.5,rng:NextInteger(500,1010),.7) end
+    elseif map=="Warehouse" then
+        for row=-4,4 do
+            for z=540,980,80 do
+                if math.abs(row)%2==0 then
+                    makePart(folder,"Shelf",Vector3.new(26,18,4),Vector3.new(row*54,9,z),Color3.fromRGB(61,62,64),Enum.Material.Metal)
+                end
+            end
+        end
+        for z=520,1000,96 do
+            neonStrip(folder,"CeilingLight",Vector3.new(-150,27,z),Vector3.new(18,.5,1.5),Color3.fromRGB(220,232,221))
+            neonStrip(folder,"CeilingLight",Vector3.new(150,27,z),Vector3.new(18,.5,1.5),Color3.fromRGB(220,232,221))
+        end
+        for i=1,22 do
+            if i%2==0 then barrel(folder,rng:NextInteger(-245,245),rng:NextInteger(510,1010)) else crate(folder,rng:NextInteger(-245,245),2.5,rng:NextInteger(510,1010),rng:NextNumber(.65,1.0)) end
+        end
+        sign(folder,"QUARANTINE",Vector3.new(0,18,520),Vector3.new(28,8,1),Color3.fromRGB(91,56,45))
+    elseif map=="Canyon" then
+        for i=1,45 do rock(folder,rng:NextInteger(-275,275),rng:NextInteger(490,1030),rng:NextInteger(4,14),rng:NextInteger(2,8),rng:NextInteger(4,14),Color3.fromRGB(126+rng:NextInteger(0,25),82,57)) end
+        for _,z in ipairs({545,675,805,935}) do
+            local post1=makePart(folder,"RopePost",Vector3.new(1.2,9,1.2),Vector3.new(-42,4.5,z),Color3.fromRGB(87,61,41),Enum.Material.Wood)
+            local post2=makePart(folder,"RopePost",Vector3.new(1.2,9,1.2),Vector3.new(42,4.5,z),Color3.fromRGB(87,61,41),Enum.Material.Wood)
+            local l=makePart(folder,"Lantern",Vector3.new(1.7,2.2,1.7),Vector3.new(-42,9.5,z),Color3.fromRGB(255,171,82),Enum.Material.Neon); l.CanCollide=false
+            local li=Instance.new("PointLight"); li.Range=20; li.Brightness=1.5; li.Color=Color3.fromRGB(255,155,75); li.Parent=l
+        end
+        sign(folder,"НЕ СМОТРИ ВНИЗ\\nDON'T LOOK DOWN",Vector3.new(0,10,720),Vector3.new(25,8,1),Color3.fromRGB(95,59,43))
+    elseif map=="Ocean" then
+        for i=1,16 do
+            local x=rng:NextInteger(-260,260)
+            local z=rng:NextInteger(500,1020)
+            local buoy=makePart(folder,"Buoy",Vector3.new(2.5,5,2.5),Vector3.new(x,3,z),Color3.fromRGB(195,72,54),Enum.Material.Metal)
+            buoy.Shape=Enum.PartType.Cylinder
+            buoy.Orientation=Vector3.new(0,0,90)
+        end
+        local dock=makePart(folder,"BrokenDock",Vector3.new(16,2,100),Vector3.new(0,3,525),Color3.fromRGB(91,68,46),Enum.Material.WoodPlanks)
+        for i=1,8 do crate(folder,rng:NextInteger(-60,60),5,rng:NextInteger(490,580),.8) end
+        sign(folder,"BACKUP 03/??",Vector3.new(0,10,600),Vector3.new(22,7,1),Color3.fromRGB(54,67,80))
+    elseif map=="Chat" then
+        for i=1,28 do
+            local x=rng:NextInteger(-255,255)
+            local z=rng:NextInteger(500,1020)
+            local h=rng:NextInteger(5,14)
+            local p=makePart(folder,"MessageShard",Vector3.new(rng:NextInteger(8,18),h,.7),Vector3.new(x,h/2,z),Color3.fromRGB(57,49,75),Enum.Material.Neon)
+            p.Transparency=rng:NextNumber(.15,.45)
+            p.CanCollide=false
+        end
+        sign(folder,"[SERVER] joined the game",Vector3.new(-135,13,555),Vector3.new(30,9,1),Color3.fromRGB(52,43,68))
+        sign(folder,"[???] is typing...",Vector3.new(145,11,820),Vector3.new(26,8,1),Color3.fromRGB(47,42,61))
+    elseif map=="Forest" then
+        for i=1,70 do
+            if rng:NextNumber()<.62 then
+                bush(folder,rng:NextInteger(-275,275),rng:NextInteger(490,1030),rng:NextNumber(.5,.9))
+            else
+                rock(folder,rng:NextInteger(-275,275),rng:NextInteger(490,1030),rng:NextInteger(3,8),rng:NextInteger(2,5),rng:NextInteger(3,8),Color3.fromRGB(60,68,62))
+            end
+        end
+        smallCampfire(folder,-120,610)
+        smallCampfire(folder,145,890)
+        local cabin=makePart(folder,"Cabin",Vector3.new(36,18,28),Vector3.new(150,9,600),Color3.fromRGB(72,57,45),Enum.Material.WoodPlanks)
+        sign(folder,"CABIN 2015",Vector3.new(150,12,585),Vector3.new(18,6,1),Color3.fromRGB(58,47,42))
+        sign(folder,"НЕ КОРМИ GUEST 0\\nDO NOT FEED GUEST 0",Vector3.new(-140,8,960),Vector3.new(26,7,1),Color3.fromRGB(48,57,49))
+    elseif map=="Archive" then
+        for z=510,1010,58 do
+            neonStrip(folder,"RackLight",Vector3.new(-255,8,z),Vector3.new(2,10,1),Color3.fromRGB(68,145,255))
+            neonStrip(folder,"RackLight",Vector3.new(255,8,z),Vector3.new(2,10,1),Color3.fromRGB(255,75,75))
+        end
+        for i=1,26 do
+            local x=rng:NextInteger(-230,230)
+            local z=rng:NextInteger(500,1020)
+            local cable=makePart(folder,"Cable",Vector3.new(rng:NextInteger(8,20),.45,.45),Vector3.new(x,.5,z),Color3.fromRGB(24,25,29),Enum.Material.SmoothPlastic)
+            cable.Orientation=Vector3.new(0,rng:NextInteger(0,180),0)
+            cable.CanCollide=false
+        end
+        sign(folder,"ACCESS LEVEL: OLD OWNER",Vector3.new(0,13,540),Vector3.new(32,8,1),Color3.fromRGB(42,52,66))
+    else
+        -- Finale deliberately looks like several old maps collided.
+        for i=1,35 do
+            local choice=rng:NextInteger(1,5)
+            local x=rng:NextInteger(-260,260)
+            local z=rng:NextInteger(500,1020)
+            if choice==1 then tree(folder,x,z,rng:NextNumber(.5,.9))
+            elseif choice==2 then barrel(folder,x,z)
+            elseif choice==3 then crate(folder,x,2.5,z,.8)
+            elseif choice==4 then rock(folder,x,z,8,5,8,Color3.fromRGB(81,62,94))
+            else neonStrip(folder,"LostNeon",Vector3.new(x,4,z),Vector3.new(10,.8,1),Color3.fromRGB(186,61,246)) end
+        end
+        sign(folder,"LAST SAVE",Vector3.new(0,16,720),Vector3.new(36,10,1),Color3.fromRGB(65,42,78))
+    end
+end
+
 function WorldService:_objectiveNodes(folder,chapter,rng)
     for step,taskInfo in ipairs(chapter.tasks) do
         for i=1,taskInfo.count do
@@ -392,6 +694,7 @@ function WorldService:BuildChapter(chapter,seed)
     self.roundSeed=seed or 1
     local rng=Random.new(self.roundSeed+chapter.id*1009)
     self:_makeBase(f,chapter,rng)
+    self:_decorateChapter(f,chapter,rng)
     self:_objectiveNodes(f,chapter,rng)
     self:_eggs(f,chapter,rng)
     self:_memories(f,chapter,rng)
@@ -459,9 +762,10 @@ function WorldService:CorruptStage(stage,chapter)
     if not self.current then return end
     local maxStages=math.max(1,math.ceil((chapter.duration or 2700)/Config.WORLD_UPDATE_INTERVAL))
     local s=math.clamp(stage/maxStages,0,1)
-    Lighting.FogEnd=520-250*s
-    Lighting.FogStart=100-45*s
-    Lighting.ClockTime=18.4+3.8*s
+    -- Rot thickens the existing chapter atmosphere instead of replacing it.
+    Lighting.FogEnd=math.max(170,Lighting.FogEnd-(14+stage*2))
+    Lighting.FogStart=math.max(22,Lighting.FogStart-3)
+    Lighting.ClockTime=(Lighting.ClockTime+0.22)%24
 
     local rng=Random.new(self.roundSeed+stage*7919+chapter.id*53)
     local updates=self.current:FindFirstChild("LiveUpdates") or Instance.new("Folder")
