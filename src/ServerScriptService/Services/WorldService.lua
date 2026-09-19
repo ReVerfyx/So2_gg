@@ -1,6 +1,7 @@
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local LevelDesign = require(script.Parent.LevelDesign)
 
 local WorldService = {}
 WorldService.__index = WorldService
@@ -225,6 +226,10 @@ end
 function WorldService:SetupLighting()
     Lighting.ClockTime=21.1
     Lighting.Brightness=1.7
+    Lighting.GlobalShadows=true
+    Lighting.ShadowSoftness=.35
+    Lighting.EnvironmentDiffuseScale=.35
+    Lighting.EnvironmentSpecularScale=.55
     Lighting.Ambient=Color3.fromRGB(58,62,79)
     Lighting.OutdoorAmbient=Color3.fromRGB(72,74,92)
     Lighting.FogColor=Color3.fromRGB(63,73,91)
@@ -245,6 +250,20 @@ function WorldService:SetupLighting()
     bloom.Size=18
     bloom.Threshold=1.25
     bloom.Parent=Lighting
+
+    local dof=Lighting:FindFirstChild("WorldDOF") or Instance.new("DepthOfFieldEffect")
+    dof.Name="WorldDOF"
+    dof.FarIntensity=.08
+    dof.FocusDistance=75
+    dof.InFocusRadius=48
+    dof.NearIntensity=.04
+    dof.Parent=Lighting
+
+    local rays=Lighting:FindFirstChild("WorldSunRays") or Instance.new("SunRaysEffect")
+    rays.Name="WorldSunRays"
+    rays.Intensity=.035
+    rays.Spread=.7
+    rays.Parent=Lighting
 end
 
 function WorldService:BuildLobby()
@@ -339,6 +358,7 @@ function WorldService:BuildLobby()
 
     sign(f,"2015: CODE ROT\nСЕРВЕР ПОМНИТ / THE SERVER REMEMBERS",Vector3.new(0,12,81),Vector3.new(48,10,1),Color3.fromRGB(46,42,45))
     self:_decorateLobby(f)
+    LevelDesign.DecorateLobby(f)
 end
 
 function WorldService:_decorateLobby(f)
@@ -695,6 +715,7 @@ function WorldService:BuildChapter(chapter,seed)
     local rng=Random.new(self.roundSeed+chapter.id*1009)
     self:_makeBase(f,chapter,rng)
     self:_decorateChapter(f,chapter,rng)
+    LevelDesign.DecorateChapter(f,chapter,rng)
     self:_objectiveNodes(f,chapter,rng)
     self:_eggs(f,chapter,rng)
     self:_memories(f,chapter,rng)
