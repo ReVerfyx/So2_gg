@@ -2,6 +2,7 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local LevelDesign = require(script.Parent.LevelDesign)
+local Suburb2015 = require(script.Parent.Suburb2015)
 
 local WorldService = {}
 WorldService.__index = WorldService
@@ -170,7 +171,7 @@ end
 
 local function setLightingProfile(map)
     local profiles={
-        Suburb={clock=18.6,bright=1.65,fog=Color3.fromRGB(101,105,119),start=95,finish=500,ambient=Color3.fromRGB(78,80,93),out=Color3.fromRGB(92,87,87),density=.24,haze=1.2,bloom=.16,sat=-.08,contrast=.04,tint=Color3.fromRGB(255,236,216)},
+        Suburb={clock=17.25,bright=2.8,fog=Color3.fromRGB(188,181,201),start=260,finish=1100,ambient=Color3.fromRGB(139,135,144),out=Color3.fromRGB(155,146,140),density=.13,haze=.45,bloom=.16,sat=.14,contrast=.04,tint=Color3.fromRGB(255,236,221)},
         ObbyPark={clock=17.7,bright=1.8,fog=Color3.fromRGB(108,112,128),start=110,finish=520,ambient=Color3.fromRGB(82,84,98),out=Color3.fromRGB(102,98,106),density=.2,haze=.9,bloom=.2,sat=-.02,contrast=.06,tint=Color3.fromRGB(244,236,255)},
         City={clock=20.8,bright=1.35,fog=Color3.fromRGB(62,68,79),start=70,finish=370,ambient=Color3.fromRGB(48,51,62),out=Color3.fromRGB(59,61,70),density=.32,haze=1.5,bloom=.28,sat=-.2,contrast=.1,tint=Color3.fromRGB(211,224,255)},
         Warehouse={clock=22.3,bright=1.05,fog=Color3.fromRGB(53,55,60),start=55,finish=310,ambient=Color3.fromRGB(43,44,49),out=Color3.fromRGB(52,49,47),density=.35,haze=1.1,bloom=.32,sat=-.25,contrast=.14,tint=Color3.fromRGB(224,216,203)},
@@ -455,21 +456,17 @@ function WorldService:_makeBase(folder, chapter, rng)
         Finale={Color3.fromRGB(65,57,74),Enum.Material.Slate},
     }
     local pal=palettes[chapter.map] or palettes.Finale
-    makePart(folder,"Ground",Vector3.new(620,4,620),Vector3.new(0,-2,760),pal[1],pal[2])
+    if chapter.map=="Suburb" then
+        -- Chapter 1 owns its full visual ground and scenery now.
+        Suburb2015.Build(folder,rng)
+    else
+        makePart(folder,"Ground",Vector3.new(1050,6,1050),Vector3.new(0,-3,760),pal[1],pal[2])
+    end
     addArenaBounds(folder,760,chapter.map,rng)
     sign(folder,chapter.title.."\n"..chapter.subtitle,Vector3.new(0,11,452),Vector3.new(38,10,1))
 
     if chapter.map=="Suburb" then
-        makePart(folder,"Road",Vector3.new(42,1,520),Vector3.new(0,.2,760),Color3.fromRGB(72,72,72),Enum.Material.Concrete)
-        for row=0,4 do
-            for _,side in ipairs({-1,1}) do
-                local x=side*(82+(row%2)*18)
-                local z=530+row*105
-                makePart(folder,"House",Vector3.new(38,22,34),Vector3.new(x,11,z),Color3.fromRGB(181,174,151),Enum.Material.Brick)
-            end
-        end
-        for i=1,34 do tree(folder,rng:NextInteger(-270,270),rng:NextInteger(480,1030),rng:NextNumber(.6,1.0)) end
-        sign(folder,"ШКОЛА / SCHOOL",Vector3.new(0,9,980),Vector3.new(26,8,1),Color3.fromRGB(66,52,48))
+        -- Suburb2015.Build above creates the complete authored chapter-one environment.
     elseif chapter.map=="ObbyPark" then
         for lane=-2,2 do for i=1,9 do
             local p=makePart(folder,"DynamicPlatform",Vector3.new(24,3,24),Vector3.new(lane*85+rng:NextInteger(-14,14),3+((i+lane)%3)*5,500+i*55),Color3.fromRGB(170+rng:NextInteger(0,70),80+rng:NextInteger(0,100),90+rng:NextInteger(0,100)))
@@ -658,11 +655,58 @@ function WorldService:_decorateChapter(folder,chapter,rng)
 end
 
 function WorldService:_objectiveNodes(folder,chapter,rng)
+    local suburbPositions={
+        [1]={
+            Vector3.new(-102,3,515), Vector3.new(108,3,523),
+            Vector3.new(-118,3,630), Vector3.new(112,3,625),
+        },
+        [2]={
+            Vector3.new(-74,2,625), Vector3.new(-142,2,812),
+            Vector3.new(142,2,744), Vector3.new(-18,2,870),
+            Vector3.new(82,2,755),
+        },
+        [3]={
+            Vector3.new(-45,4,970), Vector3.new(45,4,970),
+        },
+        [4]={
+            Vector3.new(0,4,1028),
+        },
+    }
+
     for step,taskInfo in ipairs(chapter.tasks) do
         for i=1,taskInfo.count do
-            local x=rng:NextInteger(-245,245)
-            local z=510+(step-1)*120+rng:NextInteger(0,80)
-            local obj=makePart(folder,"Objective_"..step.."_"..i,Vector3.new(6,8,6),Vector3.new(x,4,z),Color3.fromRGB(229,167-step*14,72+step*20),Enum.Material.Metal)
+            local pos
+            if chapter.map=="Suburb" and suburbPositions[step] and suburbPositions[step][i] then
+                pos=suburbPositions[step][i]
+            else
+                pos=Vector3.new(rng:NextInteger(-245,245),4,510+(step-1)*120+rng:NextInteger(0,80))
+            end
+
+            local size=Vector3.new(6,8,6)
+            local color=Color3.fromRGB(229,167-step*14,72+step*20)
+            local material=Enum.Material.Metal
+
+            if chapter.map=="Suburb" then
+                if step==1 then
+                    size=Vector3.new(4,3,2)
+                    color=Color3.fromRGB(92,129,160)
+                    material=Enum.Material.SmoothPlastic
+                elseif step==2 then
+                    size=Vector3.new(3.5,.6,4.5)
+                    color=Color3.fromRGB(255,224,127)
+                    material=Enum.Material.Neon
+                elseif step==3 then
+                    size=Vector3.new(5,8,3)
+                    color=Color3.fromRGB(77,91,102)
+                    material=Enum.Material.Metal
+                else
+                    size=Vector3.new(8,6,3)
+                    color=Color3.fromRGB(77,172,126)
+                    material=Enum.Material.Neon
+                end
+            end
+
+            local obj=makePart(folder,"Objective_"..step.."_"..i,size,pos,color,material)
             obj:SetAttribute("ObjectiveType","ChapterTask")
             obj:SetAttribute("TaskStep",step)
             obj:SetAttribute("ObjectiveIndex",i)
@@ -714,8 +758,10 @@ function WorldService:BuildChapter(chapter,seed)
     self.roundSeed=seed or 1
     local rng=Random.new(self.roundSeed+chapter.id*1009)
     self:_makeBase(f,chapter,rng)
-    self:_decorateChapter(f,chapter,rng)
-    LevelDesign.DecorateChapter(f,chapter,rng)
+    if chapter.map~="Suburb" then
+        self:_decorateChapter(f,chapter,rng)
+        LevelDesign.DecorateChapter(f,chapter,rng)
+    end
     self:_objectiveNodes(f,chapter,rng)
     self:_eggs(f,chapter,rng)
     self:_memories(f,chapter,rng)
