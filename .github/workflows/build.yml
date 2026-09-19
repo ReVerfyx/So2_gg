@@ -1,4 +1,4 @@
-name: Build Roblox Place
+name: Build and Publish Roblox Place
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 env:
+  UNIVERSE_ID: "8860447734"
   START_PLACE_ID: "79281925900541"
 
 jobs:
@@ -38,3 +39,9 @@ jobs:
           path: build/2015-CODE-ROT.rbxlx
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish to Roblox
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          curl --fail-with-body --location --request POST             "https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${START_PLACE_ID}/versions?versionType=Published"             --header "x-api-key: ${ROBLOX_API_KEY}"             --header "Content-Type: application/xml"             --data-binary "@build/2015-CODE-ROT.rbxlx"
