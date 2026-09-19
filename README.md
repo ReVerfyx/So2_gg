@@ -14,3 +14,6 @@ GitHub Actions builds `build/2015-CODE-ROT.rbxlx` on every push to `main`.
 You can also run the workflow manually from the Actions tab.
 
 Automatic upload to the Roblox place is intentionally not enabled until a Roblox Open Cloud API key and Universe ID are configured as GitHub secrets.
+
+
+Publishing target: Universe `8860447734`, Place `79281925900541`.
