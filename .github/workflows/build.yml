@@ -40,6 +40,12 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Check Roblox API key scopes
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+        run: |
+          curl --silent --show-error --fail-with-body             --request POST "https://apis.roblox.com/api-keys/v1/introspect"             --header "Content-Type: application/json"             --data "{"apiKey":"${ROBLOX_API_KEY}"}"             | jq '{enabled,expired,scopes}'
+
       - name: Publish to Roblox
         env:
           ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
