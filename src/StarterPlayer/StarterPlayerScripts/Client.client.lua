@@ -1,374 +1,308 @@
 local Players=game:GetService("Players")
-local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local RunService=game:GetService("RunService")
-local UserInputService=game:GetService("UserInputService")
-
+local RS=game:GetService("ReplicatedStorage")
+local UIS=game:GetService("UserInputService")
+local Run=game:GetService("RunService")
+local Tween=game:GetService("TweenService")
+local Sound=game:GetService("SoundService")
 local player=Players.LocalPlayer
-local playerGui=player:WaitForChild("PlayerGui")
-local R=ReplicatedStorage:WaitForChild("CityRushRemotes")
-local bootStatus=R:WaitForChild("BootStatus")
-local camera=workspace.CurrentCamera
-
-local function portrait()
-    pcall(function() playerGui.ScreenOrientation=Enum.ScreenOrientation.Portrait end)
-end
-portrait()
-task.delay(1,portrait)
-task.delay(3,portrait)
-
-local lanes={-8,0,8}
-local laneIndex=2
-local running=false
-local touchStart=nil
-local slideUntil=0
-local defaultHip=2
+local Config=require(RS:WaitForChild("Shared"):WaitForChild("Config"))
+local Courses=require(RS.Shared.Courses)
+local R=RS:WaitForChild("CityRushRemotes")
 local profile=nil
-local bikes=nil
-
-local gui=Instance.new("ScreenGui")
-gui.Name="CityRushUI"
-gui.ResetOnSpawn=false
-gui.DisplayOrder=20
-gui.Parent=playerGui
-
-local function corner(obj,r)
-    local c=Instance.new("UICorner")
-    c.CornerRadius=UDim.new(0,r or 12)
-    c.Parent=obj
+local current=nil
+local requestVersion=0
+local camera=workspace.CurrentCamera
+local controls=require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule")):GetControls()
+local colors={ink=Color3.fromRGB(20,29,43),panel=Color3.fromRGB(29,41,57),card=Color3.fromRGB(39,54,72),
+    white=Color3.fromRGB(246,242,231),muted=Color3.fromRGB(158,179,194),mint=Color3.fromRGB(141,235,198),orange=Color3.fromRGB(255,193,124)}
+local function make(class,parent,props)
+    local x=Instance.new(class); for k,v in pairs(props or {}) do x[k]=v end; x.Parent=parent; return x
 end
-
-local function stroke(obj,t)
-    local s=Instance.new("UIStroke")
-    s.Color=Color3.new(1,1,1)
-    s.Transparency=t or .75
-    s.Parent=obj
+local function round(x,r) make("UICorner",x,{CornerRadius=UDim.new(0,r or 14)}) end
+local function text(parent,value,size,color)
+    return make("TextLabel",parent,{BackgroundTransparency=1,Text=value,TextSize=size or 16,TextColor3=color or colors.white,
+        Font=Enum.Font.GothamMedium,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,Size=UDim2.new(1,0,0,28)})
 end
-
-local function label(parent,text,pos,size,fontSize,bold)
-    local l=Instance.new("TextLabel")
-    l.Position=pos
-    l.Size=size
-    l.BackgroundTransparency=1
-    l.Text=text
-    l.TextColor3=Color3.new(1,1,1)
-    l.TextSize=fontSize or 16
-    l.TextWrapped=true
-    l.Font=bold and Enum.Font.GothamBold or Enum.Font.GothamMedium
-    l.Parent=parent
-    return l
+local function button(parent,value,fn,color)
+    local b=make("TextButton",parent,{Text=value,TextColor3=colors.ink,TextSize=14,Font=Enum.Font.GothamBold,
+        BackgroundColor3=color or colors.mint,BorderSizePixel=0,Size=UDim2.fromOffset(130,40),AutoButtonColor=true})
+    round(b,10); b.Activated:Connect(fn); return b
 end
-
-local function button(parent,text,pos,size,color)
-    local b=Instance.new("TextButton")
-    b.Position=pos
-    b.Size=size
-    b.BackgroundColor3=color
-    b.TextColor3=Color3.new(1,1,1)
-    b.Text=text
-    b.Font=Enum.Font.GothamBold
-    b.TextSize=13
-    b.BorderSizePixel=0
-    corner(b,12)
-    stroke(b,.72)
-    b.Parent=parent
-    return b
+local gui=make("ScreenGui",player:WaitForChild("PlayerGui"),{Name="CityRush",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,
+    ScreenInsets=Enum.ScreenInsets.CoreUISafeInsets,DisplayOrder=5})
+local top=make("Frame",gui,{Position=UDim2.fromOffset(18,12),Size=UDim2.new(1,-36,0,58),BackgroundColor3=colors.ink,BorderSizePixel=0,BackgroundTransparency=.04})
+round(top,16)
+local logo=text(top,"CITY / RUSH",19); logo.Position=UDim2.fromOffset(16,6); logo.Size=UDim2.fromOffset(150,26); logo.Font=Enum.Font.GothamBlack
+local sub=text(top,"BIKE DISTRICT",10,colors.mint); sub.Position=UDim2.fromOffset(17,32); sub.Size=UDim2.fromOffset(150,16)
+local wallet=text(top,"0   /   COINS",15,colors.orange); wallet.AnchorPoint=Vector2.new(1,0); wallet.Position=UDim2.new(1,-16,0,7); wallet.Size=UDim2.fromOffset(180,24); wallet.TextXAlignment=Enum.TextXAlignment.Right
+local rating=text(top,"0 RATING",11,colors.muted); rating.AnchorPoint=Vector2.new(1,0); rating.Position=UDim2.new(1,-16,0,33); rating.Size=UDim2.fromOffset(180,17); rating.TextXAlignment=Enum.TextXAlignment.Right
+local dock=make("Frame",gui,{AnchorPoint=Vector2.new(.5,1),Position=UDim2.new(.5,0,1,-12),Size=UDim2.new(1,-24,0,54),BackgroundColor3=colors.ink,BorderSizePixel=0})
+round(dock,16)
+make("UISizeConstraint",dock,{MaxSize=Vector2.new(780,54),MinSize=Vector2.new(280,54)})
+make("UIListLayout",dock,{FillDirection=Enum.FillDirection.Horizontal,HorizontalAlignment=Enum.HorizontalAlignment.Center,VerticalAlignment=Enum.VerticalAlignment.Center,Padding=UDim.new(0,5)})
+local shade=make("Frame",gui,{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.4,Visible=false,BorderSizePixel=0,ZIndex=10})
+local panel=make("Frame",shade,{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.49),Size=UDim2.new(1,-28,1,-100),BackgroundColor3=colors.panel,BorderSizePixel=0,ZIndex=11})
+round(panel,20); make("UISizeConstraint",panel,{MaxSize=Vector2.new(800,650),MinSize=Vector2.new(260,200)})
+local title=text(panel,"",25); title.Position=UDim2.fromOffset(22,15); title.Size=UDim2.new(1,-85,0,35); title.ZIndex=12; title.Font=Enum.Font.GothamBlack
+local close=button(panel,"×",function() shade.Visible=false; current=nil; requestVersion+=1 end,colors.muted)
+close.Size=UDim2.fromOffset(38,38); close.Position=UDim2.new(1,-54,0,14); close.ZIndex=12
+local list=make("ScrollingFrame",panel,{Position=UDim2.fromOffset(16,63),Size=UDim2.new(1,-32,1,-79),BackgroundTransparency=1,BorderSizePixel=0,
+    ScrollBarThickness=3,ScrollBarImageColor3=colors.mint,AutomaticCanvasSize=Enum.AutomaticSize.Y,CanvasSize=UDim2.new(),ZIndex=12})
+local layout=make("UIListLayout",list,{Padding=UDim.new(0,10),SortOrder=Enum.SortOrder.LayoutOrder})
+local toast=text(gui,"",15); toast.AnchorPoint=Vector2.new(.5,1); toast.Position=UDim2.new(.5,0,1,-80); toast.Size=UDim2.new(1,-40,0,48)
+toast.TextXAlignment=Enum.TextXAlignment.Center; toast.BackgroundColor3=colors.ink; toast.BackgroundTransparency=.05; toast.Visible=false; toast.ZIndex=30; round(toast,12)
+make("UISizeConstraint",toast,{MaxSize=Vector2.new(520,80),MinSize=Vector2.new(200,48)})
+local toastVersion=0
+local function notify(msg)
+    if not msg then return end
+    toastVersion+=1; local v=toastVersion; toast.Text=tostring(msg); toast.Visible=true
+    task.delay(3.5,function() if toastVersion==v then toast.Visible=false end end)
 end
-
-local topBar=Instance.new("Frame")
-topBar.Position=UDim2.new(.5,-155,0,10)
-topBar.Size=UDim2.fromOffset(310,58)
-topBar.BackgroundColor3=Color3.fromRGB(26,29,44)
-topBar.BackgroundTransparency=.08
-topBar.BorderSizePixel=0
-corner(topBar,16)
-stroke(topBar,.76)
-topBar.Parent=gui
-
-local title=label(topBar,"CITY RUSH",UDim2.fromOffset(12,5),UDim2.fromOffset(95,24),16,true)
-title.TextColor3=Color3.fromRGB(255,214,82)
-local coins=label(topBar,"0 coins",UDim2.fromOffset(112,5),UDim2.fromOffset(90,24),14,true)
-coins.TextColor3=Color3.fromRGB(255,214,82)
-local rating=label(topBar,"R 0",UDim2.fromOffset(208,5),UDim2.fromOffset(88,24),14,true)
-local best=label(topBar,"BEST 0",UDim2.fromOffset(12,30),UDim2.fromOffset(100,20),12,false)
-best.TextColor3=Color3.fromRGB(126,217,255)
-local bikeInfo=label(topBar,"BMX LV.1",UDim2.fromOffset(120,30),UDim2.fromOffset(170,20),12,true)
-bikeInfo.TextXAlignment=Enum.TextXAlignment.Right
-
-local lobbyButtons=Instance.new("Frame")
-lobbyButtons.Position=UDim2.new(.5,-155,1,-72)
-lobbyButtons.Size=UDim2.fromOffset(310,58)
-lobbyButtons.BackgroundTransparency=1
-lobbyButtons.Parent=gui
-
-local home=button(lobbyButtons,"МОЙ ГАРАЖ",UDim2.fromOffset(0,0),UDim2.fromOffset(98,52),Color3.fromRGB(225,158,66))
-local shop=button(lobbyButtons,"ВЕЛИКИ",UDim2.fromOffset(106,0),UDim2.fromOffset(98,52),Color3.fromRGB(73,151,238))
-local topBtn=button(lobbyButtons,"ТОП",UDim2.fromOffset(212,0),UDim2.fromOffset(98,52),Color3.fromRGB(171,86,225))
-
-local hud=Instance.new("Frame")
-hud.Size=UDim2.fromScale(1,1)
-hud.BackgroundTransparency=1
-hud.Visible=false
-hud.Parent=gui
-local score=label(hud,"0 m",UDim2.new(.5,-100,.06,0),UDim2.fromOffset(200,50),34,true)
-local runCoins=label(hud,"● 0",UDim2.fromOffset(16,20),UDim2.fromOffset(110,36),17,true)
-runCoins.TextColor3=Color3.fromRGB(255,218,74)
-local shield=label(hud,"",UDim2.new(1,-126,0,20),UDim2.fromOffset(110,36),15,true)
-shield.TextColor3=Color3.fromRGB(100,232,255)
-local swipe=label(hud,"SWIPE",UDim2.new(.5,-60,1,-58),UDim2.fromOffset(120,30),12,true)
-swipe.TextTransparency=.5
-
-local modal=Instance.new("Frame")
-modal.Position=UDim2.new(.5,-165,.13,0)
-modal.Size=UDim2.new(0,330,.70,0)
-modal.BackgroundColor3=Color3.fromRGB(24,27,43)
-modal.BorderSizePixel=0
-modal.Visible=false
-corner(modal,18)
-stroke(modal,.7)
-modal.Parent=gui
-
-local modalTitle=label(modal,"",UDim2.fromOffset(16,10),UDim2.new(1,-70,0,40),21,true)
-modalTitle.TextXAlignment=Enum.TextXAlignment.Left
-local close=button(modal,"×",UDim2.new(1,-50,0,8),UDim2.fromOffset(40,40),Color3.fromRGB(87,58,82))
-
-local list=Instance.new("ScrollingFrame")
-list.Position=UDim2.fromOffset(10,58)
-list.Size=UDim2.new(1,-20,1,-68)
-list.BackgroundTransparency=1
-list.BorderSizePixel=0
-list.ScrollBarThickness=4
-list.CanvasSize=UDim2.fromOffset(0,0)
-list.Parent=modal
-local layout=Instance.new("UIListLayout")
-layout.Padding=UDim.new(0,8)
-layout.Parent=list
-
-local toast=label(gui,"",UDim2.new(.5,-145,.78,0),UDim2.fromOffset(290,54),15,true)
-toast.BackgroundTransparency=.08
-toast.BackgroundColor3=Color3.fromRGB(25,29,43)
-toast.Visible=false
-corner(toast,14)
-stroke(toast,.74)
-
-local boot=label(gui,"CITY RUSH • загрузка",UDim2.new(.5,-145,0,74),UDim2.fromOffset(290,32),12,true)
-boot.BackgroundTransparency=.12
-boot.BackgroundColor3=Color3.fromRGB(25,29,43)
-corner(boot,10)
-
-local function showToast(text)
-    toast.Text=tostring(text)
-    toast.Visible=true
-    task.delay(2.2,function()
-        if toast.Text==tostring(text) then toast.Visible=false end
-    end)
+local save=text(gui,"Сохранение задерживается. Не выходи из игры.",12,colors.orange)
+save.Position=UDim2.fromOffset(20,74); save.Size=UDim2.new(1,-40,0,22); save.Visible=false
+player:GetAttributeChangedSignal("SaveWarning"):Connect(function() save.Visible=player:GetAttribute("SaveWarning")==true end)
+local function card(height)
+    local c=make("Frame",list,{Size=UDim2.new(1,-5,0,height),BackgroundColor3=colors.card,BorderSizePixel=0,ZIndex=13}); round(c,14)
+    c.LayoutOrder=#list:GetChildren(); return c
 end
-
-local function refreshBoot()
-    local s=bootStatus.Value
-    if s=="READY" then boot.Visible=false
-    else
-        boot.Visible=true
-        boot.Text=s
-        boot.TextColor3=string.find(s,"ERROR",1,true) and Color3.fromRGB(255,125,125) or Color3.new(1,1,1)
+local function line(c,value,y,size,color)
+    local t=text(c,value,size,color); t.Position=UDim2.fromOffset(16,y); t.Size=UDim2.new(1,-32,0,28); t.ZIndex=14; return t
+end
+local function action(c,value,fn,x,y,color)
+    local b=button(c,value,fn,color)
+    b.Position=x>100 and UDim2.new(.5,3,0,y) or UDim2.fromOffset(16,y)
+    b.Size=UDim2.new(.5,-19,0,40); b.ZIndex=14; return b
+end
+local function clear()
+    for _,x in ipairs(list:GetChildren()) do if x~=layout then x:Destroy() end end
+    list.CanvasPosition=Vector2.zero
+end
+local function sync()
+    wallet.Text=tostring(player:GetAttribute("Coins") or 0).."   /   COINS"
+    rating.Text=tostring(player:GetAttribute("Rating") or 0).." RATING"
+end
+for _,a in ipairs({"Coins","Rating"}) do player:GetAttributeChangedSignal(a):Connect(sync) end
+sync()
+local open
+local function preview(c,name)
+    local folder=RS:FindFirstChild("BikePreviews"); local source=folder and folder:FindFirstChild(name)
+    if not source then return end
+    local view=make("ViewportFrame",c,{Size=UDim2.fromOffset(108,84),Position=UDim2.new(1,-118,0,9),BackgroundTransparency=1,
+        Ambient=Color3.fromRGB(195,210,226),LightColor=Color3.fromRGB(255,226,193),LightDirection=Vector3.new(-1,-2,-1),ZIndex=14})
+    local model=source:Clone(); model.Parent=view
+    local cam=make("Camera",view,{CFrame=CFrame.lookAt(Vector3.new(7,3,8),Vector3.new(0,.5,0)),FieldOfView=40}); view.CurrentCamera=cam
+end
+local function worlds()
+    title.Text="ВЫБЕРИ СВОЮ ЛИНИЮ"
+    for i,w in ipairs(Config.WORLDS) do
+        local c=card(177); local locked=i>(profile.unlocked or 1)
+        local n=line(c,string.format("0%d / %s",i,w.name),10,21,w.color); n.Font=Enum.Font.GothamBlack
+        line(c,w.subtitle.."  ·  12 этапов",42,13,colors.muted)
+        local best=profile.bestTimes[tostring(i)]
+        local medal=({[0]="—","Бронза","Серебро","Золото"})[profile.medals[tostring(i)] or 0]
+        line(c,best and string.format("Рекорд %.2f с   /   %s",best,medal) or "Пройди мир и открой следующий",69,13)
+        action(c,locked and "ЗАКРЫТО" or "НА СТАРТ",function()
+            if locked then notify("Сначала пройди предыдущий мир"); return end
+            R.Action:FireServer("Start",i,false); shade.Visible=false
+        end,16,116,locked and colors.muted or w.color)
+        local cp=profile.checkpoints[tostring(i)] or 0
+        if cp>0 and not locked then
+            local b=action(c,"ЭТАП "..(cp+1),function() R.Action:FireServer("Start",i,true); shade.Visible=false end,153,116,colors.white)
+        end
     end
 end
-bootStatus:GetPropertyChangedSignal("Value"):Connect(refreshBoot)
-refreshBoot()
-
-local function refreshStats()
-    coins.Text=tostring(player:GetAttribute("Coins") or 0).." coins"
-    rating.Text="R "..tostring(player:GetAttribute("Rating") or 0)
-    best.Text="BEST "..tostring(player:GetAttribute("Best") or 0)
-    bikeInfo.Text=tostring(player:GetAttribute("EquippedBike") or "BMX").." LV."..tostring(player:GetAttribute("BikeLevel") or 1)
-end
-for _,a in ipairs({"Coins","Rating","Best","EquippedBike","BikeLevel"}) do
-    player:GetAttributeChangedSignal(a):Connect(refreshStats)
-end
-refreshStats()
-
-local function clearList()
-    for _,x in ipairs(list:GetChildren()) do
-        if not x:IsA("UIListLayout") then x:Destroy() end
+local function bikes()
+    title.Text="THE CYCLE ATELIER"
+    for _,name in ipairs(Config.BIKE_ORDER) do
+        local info=Config.BIKES[name]; local owned=profile.ownedBikes[name]; local level=profile.bikeLevels[name] or 1
+        local c=card(194)
+        local n=line(c,info.displayName,12,16,info.color); n.Size=UDim2.new(1,-138,0,48)
+        local levelText=line(c,"LEVEL "..level.." / "..Config.BIKE_MAX_LEVEL,60,11,colors.muted); levelText.Size=UDim2.new(1,-130,0,24)
+        line(c,string.format("Скорость %d  ·  Разгон %d  ·  Руль %.1f",info.speed,info.acceleration,info.handling),94,12)
+        preview(c,name)
+        local selected=profile.equippedBike==name
+        action(c,selected and "ВЫБРАН" or (owned and "ВЫБРАТЬ" or tostring(info.price).." COINS"),function() R.Action:FireServer("Select",name) end,16,139,selected and colors.muted or colors.mint)
+        if owned then
+            local cost=level>=Config.BIKE_MAX_LEVEL and "MAX" or "+ LV / "..Config.GetUpgradeCost(name,level)
+            local b=action(c,cost,function() R.Action:FireServer("Upgrade",name) end,153,139,info.color)
+        end
     end
 end
-
-local bikeOrder={"BMX","Street","Neon","Carbon"}
-local function openGarage()
-    profile,bikes=R.RequestProfile:InvokeServer()
-    clearList()
-    modalTitle.Text="ВЕЛИКИ"
-    modal.Visible=true
-
-    for _,name in ipairs(bikeOrder) do
-        local info=bikes[name]
-        local level=profile.bikeLevels[name] or 1
-        local owned=profile.ownedBikes[name]==true
-        local equipped=profile.equippedBike==name
-        local card=Instance.new("Frame")
-        card.Size=UDim2.new(1,-4,0,116)
-        card.BackgroundColor3=Color3.fromRGB(39,43,64)
-        card.BorderSizePixel=0
-        corner(card,12)
-        card.Parent=list
-
-        local color=Instance.new("Frame")
-        color.Position=UDim2.fromOffset(10,12)
-        color.Size=UDim2.fromOffset(54,54)
-        color.BackgroundColor3=info.color
-        color.BorderSizePixel=0
-        corner(color,27)
-        color.Parent=card
-
-        local n=label(card,info.displayName.."  LV."..level,UDim2.fromOffset(74,8),UDim2.new(1,-170,0,26),17,true)
-        n.TextXAlignment=Enum.TextXAlignment.Left
-        local d=label(card,info.description,UDim2.fromOffset(74,34),UDim2.new(1,-170,0,42),11,false)
-        d.TextXAlignment=Enum.TextXAlignment.Left
-        d.TextColor3=Color3.fromRGB(198,201,215)
-
-        local actionText=equipped and "ВЫБРАН" or (owned and "ВЫБРАТЬ" or tostring(info.price))
-        local select=button(card,actionText,UDim2.new(1,-94,0,12),UDim2.fromOffset(84,38),owned and Color3.fromRGB(62,153,107) or Color3.fromRGB(194,118,60))
-        select.TextSize=11
-        select.Activated:Connect(function()
-            R.BikeAction:FireServer("Select",name)
-        end)
-
-        local upCost=level>=10 and "MAX" or tostring(math.floor(info.upgradeBase*(1.5^(level-1))))
-        local upgrade=button(card,"UP "..upCost,UDim2.new(1,-94,0,61),UDim2.fromOffset(84,38),Color3.fromRGB(210,145,64))
-        upgrade.TextSize=10
-        upgrade.Visible=owned
-        upgrade.Activated:Connect(function()
-            R.BikeAction:FireServer("Upgrade",name)
-        end)
+local function daily()
+    title.Text="DAILY CLUB"
+    local day=math.floor(os.time()/86400); local claimed=profile.lastDaily>=day
+    local nextDay=profile.lastDaily==day-1 and (profile.streak%7)+1 or (claimed and profile.streak or 1)
+    for i,reward in ipairs(Config.DAILY_REWARDS) do
+        local c=card(62); line(c,"День "..i.."   /   "..reward.." COINS",16,16,i==nextDay and colors.mint or colors.muted)
     end
-
-    task.wait()
-    list.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y+8)
+    local c=card(70); action(c,claimed and "ПОЛУЧЕНО" or "ЗАБРАТЬ",function() R.Action:FireServer("Daily") end,16,15,colors.orange)
 end
-
-local function openTop()
-    local rows=R.RequestTop:InvokeServer()
-    clearList()
-    modalTitle.Text="ГЛОБАЛЬНЫЙ ТОП"
-    modal.Visible=true
-    for _,row in ipairs(rows) do
-        local card=Instance.new("Frame")
-        card.Size=UDim2.new(1,-4,0,48)
-        card.BackgroundColor3=Color3.fromRGB(39,43,64)
-        card.BorderSizePixel=0
-        corner(card,10)
-        card.Parent=list
-        local l=label(card,string.format("#%d  %s",row.rank,row.name),UDim2.fromOffset(10,0),UDim2.new(1,-90,1,0),13,true)
-        l.TextXAlignment=Enum.TextXAlignment.Left
-        local r=label(card,tostring(row.rating),UDim2.new(1,-80,0,0),UDim2.fromOffset(70,48),13,true)
-        r.TextColor3=Color3.fromRGB(255,216,82)
+local function settings()
+    title.Text="НАСТРОЙКИ"
+    for _,item in ipairs({{"music","Музыка"},{"reducedMotion","Меньше движения камеры"}}) do
+        local key,label=table.unpack(item); local c=card(100)
+        line(c,label,8,16)
+        action(c,profile.settings[key] and "ВКЛ" or "ВЫКЛ",function() R.Action:FireServer("Settings",key,not profile.settings[key]) end,16,47)
     end
-    task.wait()
-    list.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y+8)
+    local c=card(100); line(c,"Гонки проходят на одинаковых характеристиках велосипедов.",12,14,colors.muted)
+    local t=line(c,"Возврат к чекпоинту доступен в любой момент заезда.",47,13,colors.muted); t.Size=UDim2.new(1,-32,0,45)
 end
-
-home.Activated:Connect(function() R.LobbyAction:FireServer("Home") end)
-shop.Activated:Connect(function() R.LobbyAction:FireServer("Bikes") end)
-topBtn.Activated:Connect(openTop)
-close.Activated:Connect(function() modal.Visible=false end)
-
-R.Toast.OnClientEvent:Connect(showToast)
-R.Profile.OnClientEvent:Connect(function(p,b,msg)
-    profile,bikes=p,b
-    refreshStats()
-    if msg then showToast(msg) end
-    if modal.Visible and modalTitle.Text=="ВЕЛИКИ" then openGarage() end
-end)
-
-local function setSlide(on)
-    local hum=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    if on then
-        slideUntil=tick()+.72
-        hum.HipHeight=math.max(0,defaultHip-1.6)
-        R.RunAction:FireServer("Slide",true)
-        task.delay(.72,function()
-            if tick()>=slideUntil and hum.Parent then
-                hum.HipHeight=defaultHip
-                R.RunAction:FireServer("Slide",false)
+open=function(page)
+    if not profile then notify("Загружаем гараж…"); return end
+    requestVersion+=1; local version=requestVersion
+    current=page; shade.Visible=true; clear()
+    if page=="Worlds" then worlds()
+    elseif page=="Bikes" then bikes()
+    elseif page=="Daily" then daily()
+    elseif page=="Settings" then settings()
+    elseif page=="Social" or page=="Top" or page=="Race" then
+        title.Text=page=="Social" and "BIKE DISTRICT" or (page=="Top" and "GLOBAL RIDERS" or "RACE CLUB")
+        line(card(60),"Загрузка…",15,15,colors.muted)
+        task.spawn(function()
+            local ok,result=pcall(function()
+                if page=="Social" then return R.RequestSocial:InvokeServer() end
+                if page=="Top" then return R.RequestTop:InvokeServer() end
+                return R.RequestRace:InvokeServer()
+            end)
+            if current~=page or version~=requestVersion then return end
+            clear()
+            if not ok or not result then line(card(65),"Не удалось загрузить. Попробуй ещё раз.",12,14); return end
+            if page=="Race" then
+                local c=card(210)
+                line(c,"COASTLINE / EQUAL BIKES",12,18,colors.mint)
+                line(c,"Одинаковая скорость. Побеждает точность.",47,14,colors.muted)
+                local statusLine=line(c,"",80,14)
+                statusLine:SetAttribute("RaceTime",result.active and 0 or result.nextStart)
+                statusLine.Text=result.active and "Гонка идёт" or "Старт через "..math.max(0,math.ceil(result.nextStart-workspace:GetServerTimeNow())).." с"
+                line(c,"В очереди: "..result.count.." / минимум 2",111,14)
+                action(c,result.queued and "ВЫЙТИ" or "УЧАСТВОВАТЬ",function() R.Action:FireServer("Queue"); task.delay(.3,function() if current=="Race" then open("Race") end end) end,16,155,colors.orange)
+                for _,row in ipairs(result.results) do line(card(65),string.format("#%d  %s  /  %.2f с",row.rank,row.name,row.seconds),15,15) end
+            else
+                if #result==0 then line(card(70),page=="Top" and "Рейтинг появится после первых прохождений." or "Гаражи пока пустуют.",12,14) end
+                for _,row in ipairs(result) do
+                    local c=card(page=="Social" and 115 or 68)
+                    line(c,string.format("#%02d / %s",row.plot or row.rank,row.name),10,16)
+                    if page=="Social" then
+                        action(c,"ПОСЕТИТЬ",function() R.Action:FireServer("Visit",row.userId); shade.Visible=false end,16,57,colors.mint)
+                    else line(c,tostring(row.rating).." RATING",36,12,colors.orange) end
+                end
             end
         end)
+    end
+    if not (profile.settings and profile.settings.reducedMotion) then
+        panel.Position=UDim2.fromScale(.5,.51); Tween:Create(panel,TweenInfo.new(.18,Enum.EasingStyle.Quad),{Position=UDim2.fromScale(.5,.49)}):Play()
+    end
+end
+for _,item in ipairs({{"ЕХАТЬ","Worlds"},{"БАЙКИ","Bikes"},{"ГАРАЖИ","Social"},{"ТОП","Top"},{"КЛУБ","Daily"},{"ОПЦИИ","Settings"}}) do
+    local page=item[2]; local b=button(dock,item[1],function() open(page) end,page=="Worlds" and colors.mint or colors.card)
+    b.Size=UDim2.new(1/6,-8,0,40); b.TextSize=11; if page~="Worlds" then b.TextColor3=colors.white end
+end
+local hud=make("Frame",gui,{Position=UDim2.fromOffset(18,82),Size=UDim2.new(1,-36,0,80),BackgroundColor3=colors.ink,BorderSizePixel=0,Visible=false})
+round(hud,15)
+local stageText=text(hud,"",17); stageText.Position=UDim2.fromOffset(14,6); stageText.Size=UDim2.new(.68,0,0,24)
+local timer=text(hud,"",18,colors.mint); timer.Position=UDim2.new(.7,0,0,8); timer.Size=UDim2.new(.3,-14,0,24); timer.TextXAlignment=Enum.TextXAlignment.Right
+local progress=make("Frame",hud,{Position=UDim2.new(0,14,1,-20),Size=UDim2.new(1,-28,0,5),BorderSizePixel=0,BackgroundColor3=colors.card}); round(progress,3)
+local fill=make("Frame",progress,{Size=UDim2.fromScale(0,1),BorderSizePixel=0,BackgroundColor3=colors.mint}); round(fill,3)
+local stageName=text(hud,"",11,colors.muted); stageName.Position=UDim2.fromOffset(14,32); stageName.Size=UDim2.new(1,-28,0,20)
+local rideBar=make("Frame",gui,{AnchorPoint=Vector2.new(.5,1),Position=UDim2.new(.5,0,1,-12),Size=UDim2.fromOffset(286,48),BackgroundTransparency=1,Visible=false})
+local retry=button(rideBar,"ЧЕКПОИНТ",function() R.Action:FireServer("Retry") end,colors.white)
+local home=button(rideBar,"В ГАРАЖ",function() R.Action:FireServer("Home") end,colors.muted); home.Position=UDim2.fromOffset(145,0)
+local jumpPressed=false; local brakePressed=false; local touchButtons={}
+local function touchButton(label,x,fnDown,fnUp)
+    local b=button(gui,label,function() end,colors.white); b.AnchorPoint=Vector2.new(1,1); b.Position=UDim2.new(1,x,1,-92); b.Size=UDim2.fromOffset(86,65); b.Visible=false
+    b.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then fnDown() end end)
+    b.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then fnUp() end end)
+    table.insert(touchButtons,b)
+end
+touchButton("ПРЫЖОК",-18,function() jumpPressed=true end,function() jumpPressed=false end)
+touchButton("ТОРМОЗ",-112,function() brakePressed=true end,function() brakePressed=false end)
+UIS.JumpRequest:Connect(function() jumpPressed=true; task.delay(.12,function() jumpPressed=false end) end)
+UIS.WindowFocusReleased:Connect(function() jumpPressed=false; brakePressed=false; R.Input:FireServer(0,0,false) end)
+local function riding()
+    local on=player:GetAttribute("Riding")==true
+    hud.Visible=on; rideBar.Visible=on; dock.Visible=not on
+    for _,b in ipairs(touchButtons) do b.Visible=on and UIS.TouchEnabled end
+    if on then shade.Visible=false; current=nil; camera.CameraType=Enum.CameraType.Scriptable
     else
-        hum.HipHeight=defaultHip
-        R.RunAction:FireServer("Slide",false)
+        camera.CameraType=Enum.CameraType.Custom; camera.FieldOfView=70
+        local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid"); if h then camera.CameraSubject=h; h:SetStateEnabled(Enum.HumanoidStateType.Jumping,true) end
     end
 end
-
-local function moveLane(d)
-    laneIndex=math.clamp(laneIndex+d,1,3)
+player:GetAttributeChangedSignal("Riding"):Connect(riding)
+R.Toast.OnClientEvent:Connect(notify)
+R.Open.OnClientEvent:Connect(open)
+R.Action.OnClientEvent:Connect(function(actionName) if actionName=="Daily" then open("Daily") end end)
+local music=make("Sound",Sound,{Name="CityRushMusic",SoundId=Config.MUSIC_ID,Volume=.18,Looped=true})
+local function applyProfile(p)
+    if not p then return end
+    profile=p
+    if Config.MUSIC_ID~="" then if profile.settings.music then if not music.IsPlaying then music:Play() end else music:Pause() end end
+    if shade.Visible and (current=="Bikes" or current=="Daily" or current=="Settings") then open(current) end
 end
-
-local function jump()
-    local hum=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum and hum.FloorMaterial~=Enum.Material.Air then hum.Jump=true end
-end
-
-UserInputService.InputBegan:Connect(function(input,gp)
-    if gp or not running then return end
-    if input.UserInputType==Enum.UserInputType.Touch then touchStart=input.Position
-    elseif input.KeyCode==Enum.KeyCode.Left or input.KeyCode==Enum.KeyCode.A then moveLane(-1)
-    elseif input.KeyCode==Enum.KeyCode.Right or input.KeyCode==Enum.KeyCode.D then moveLane(1)
-    elseif input.KeyCode==Enum.KeyCode.Up or input.KeyCode==Enum.KeyCode.W or input.KeyCode==Enum.KeyCode.Space then jump()
-    elseif input.KeyCode==Enum.KeyCode.Down or input.KeyCode==Enum.KeyCode.S then setSlide(true) end
-end)
-
-UserInputService.InputEnded:Connect(function(input,gp)
-    if gp or not running then return end
-    if input.UserInputType==Enum.UserInputType.Touch and touchStart then
-        local d=input.Position-touchStart
-        touchStart=nil
-        if d.Magnitude<35 then return end
-        if math.abs(d.X)>math.abs(d.Y) then moveLane(d.X>0 and 1 or -1)
-        else if d.Y<0 then jump() else setSlide(true) end end
+R.Profile.OnClientEvent:Connect(applyProfile)
+R.State.OnClientEvent:Connect(function(state)
+    if state.kind=="Checkpoint" then
+        notify("CHECKPOINT "..state.stage.." / 12")
+        if not (profile and profile.settings.reducedMotion) then
+            fill.BackgroundColor3=colors.white; Tween:Create(fill,TweenInfo.new(.5),{BackgroundColor3=colors.mint}):Play()
+        end
+    elseif state.kind=="Finish" then
+        current="Result"; shade.Visible=true; clear(); title.Text="ЛИНИЯ ПРОЙДЕНА"
+        local c=card(230)
+        line(c,Config.WORLDS[state.world].name,12,23,colors.mint)
+        line(c,string.format("%.2f с   /   %d падений",state.seconds,state.deaths),56,19)
+        line(c,"+"..state.reward.." COINS"..(state.first and "   /   ПЕРВОЕ ПРОХОЖДЕНИЕ" or ""),99,14,colors.orange)
+        line(c,state.ranked and "Результат сохранён" or "Продолженный заезд — без рекорда времени",131,12,colors.muted)
+        action(c,"ЕЩЁ РАЗ",function() R.Action:FireServer("Start",state.world,false); shade.Visible=false end,16,178)
+        action(c,"МИРЫ",function() open("Worlds") end,153,178,colors.white)
     end
 end)
-
-R.RunStarted.OnClientEvent:Connect(function()
-    running=true
-    laneIndex=2
-    topBar.Visible=false
-    lobbyButtons.Visible=false
-    modal.Visible=false
-    hud.Visible=true
-    camera.CameraType=Enum.CameraType.Scriptable
-    local hum=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then defaultHip=hum.HipHeight end
-end)
-
-R.RunEnded.OnClientEvent:Connect(function(result)
-    running=false
-    hud.Visible=false
-    topBar.Visible=true
-    lobbyButtons.Visible=true
-    camera.CameraType=Enum.CameraType.Custom
-    setSlide(false)
-    refreshStats()
-    showToast(string.format("%d м • %d монет (+%d бонус) • +%d рейтинга",result.score or 0,result.coins or 0,result.bonusCoins or 0,result.ratingGain or 0))
-end)
-
-RunService.RenderStepped:Connect(function(dt)
-    if not running then return end
+local send=0
+Run.RenderStepped:Connect(function(dt)
+    if current=="Race" and shade.Visible then
+        for _,x in ipairs(list:GetDescendants()) do
+            local t=x:GetAttribute("RaceTime")
+            if t and t>0 then x.Text="Старт через "..math.max(0,math.ceil(t-workspace:GetServerTimeNow())).." с" end
+        end
+    end
+    if not player:GetAttribute("Riding") then return end
+    local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
-
-    local speed=player:GetAttribute("RunSpeed") or 27
-    local targetX=lanes[laneIndex]
-    local x=root.Position.X+(targetX-root.Position.X)*math.min(1,dt*12)
-    local z=root.Position.Z+speed*dt
-    local y=root.Position.Y
-
-    root.CFrame=CFrame.new(x,y,z)
-    root.AssemblyAngularVelocity=Vector3.zero
-
-    camera.CFrame=CFrame.lookAt(Vector3.new(x*.2,y+7,z-15),Vector3.new(x,y+2.5,z+13))
-    camera.FieldOfView=72
-
-    score.Text=tostring(player:GetAttribute("Score") or 0).." m"
-    runCoins.Text="● "..tostring(player:GetAttribute("RunCoins") or 0)
-    local s=player:GetAttribute("Shield") or 0
-    shield.Text=s>0 and ("ЩИТ ×"..s) or ""
+    -- Native Roblox thumbstick, keyboard and gamepad all feed the same input path.
+    local move=controls:GetMoveVector()
+    local throttle=brakePressed and 0 or math.clamp(-move.Z,-1,1)
+    local steer=math.clamp(move.X,-1,1)
+    if UIS:GetFocusedTextBox() then throttle=0; steer=0 end
+    send+=dt
+    if send>=.05 then send=0; R.Input:FireServer(throttle,steer,jumpPressed or UIS:IsKeyDown(Enum.KeyCode.Space)) end
+    if h then h.Jump=false; h:SetStateEnabled(Enum.HumanoidStateType.Jumping,false) end
+    local seat=h and h.SeatPart
+    local frame=seat and seat.CFrame or root.CFrame
+    local dir=Vector3.new(frame.LookVector.X,0,frame.LookVector.Z)
+    if dir.Magnitude<.01 then dir=Vector3.new(0,0,-1) else dir=dir.Unit end
+    local target=root.Position+Vector3.new(0,2,0)
+    local desired=target-dir*17+Vector3.new(0,8,0)
+    local params=RaycastParams.new(); params.FilterDescendantsInstances={player.Character,workspace:FindFirstChild("ActiveBikes")}; params.RespectCanCollide=true
+    local hit=workspace:Raycast(target,desired-target,params)
+    if hit then desired=hit.Position+hit.Normal*.7 end
+    local cf=CFrame.lookAt(desired,target+dir*4)
+    local reduced=profile and profile.settings.reducedMotion
+    camera.CFrame=camera.CFrame:Lerp(cf,1-math.exp(-dt*(reduced and 14 or 6)))
+    camera.FieldOfView=reduced and 70 or 70+math.min(root.AssemblyLinearVelocity.Magnitude/8,6)
+    local world=player:GetAttribute("World") or 1; local cp=player:GetAttribute("Checkpoint") or 0
+    stageText.Text=Config.WORLDS[world].name.." / "..math.min(cp+1,12).." из 12"
+    stageName.Text=Courses[Config.WORLDS[world].id][math.min(cp+1,12)].name
+    local elapsed=workspace:GetServerTimeNow()-(player:GetAttribute("RunStart") or workspace:GetServerTimeNow())
+    timer.Text=elapsed<0 and tostring(math.ceil(-elapsed)) or string.format("%02d:%05.2f",math.floor(elapsed/60),elapsed%60)
+    fill.Size=UDim2.fromScale(cp/12,1)
 end)
+task.spawn(function()
+    for _=1,30 do
+        local ok,p=pcall(function() return R.RequestProfile:InvokeServer() end)
+        if ok and p then applyProfile(p); return end
+        task.wait(1)
+    end
+    notify("Профиль недоступен. Переподключись к игре.")
+end)
+riding()
