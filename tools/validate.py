@@ -26,3 +26,13 @@ for path in (ROOT / 'src').rglob('*.lua'):
     for child in re.findall(r'require\(script\.Parent\.(\w+)\)', code):
         assert (path.parent / (child + '.lua')).exists(), (path, child)
 print('Project contracts OK: 36 stages, 6 patterns, 11 garages, preserved publication IDs, main-only publish.')
+
+client=(ROOT/'src/StarterPlayer/StarterPlayerScripts/Client.client.lua').read_text()
+ride=(ROOT/'src/ServerScriptService/Services/RideService.lua').read_text()
+assert 'touchButton(' not in client, 'No duplicate mobile controls'
+assert 'JumpRequest' not in client and 'h.Jump=false' not in client, 'Native jump must remain intact'
+assert 'CameraType.Scriptable' not in client, 'Native camera stays usable'
+assert 'top.Visible=not on' in client and 'dock.Visible=not on' in client
+assert 'SetNetworkOwner(nil)' not in ride and 'AssemblyLinearVelocity=Vector3.new' not in ride
+assert project['tree']['AssetService']['$properties']['AllowInsertFreeAssets']
+print('Native controls and unobstructed race HUD contracts OK.')

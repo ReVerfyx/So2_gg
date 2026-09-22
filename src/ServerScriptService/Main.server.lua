@@ -4,7 +4,7 @@ local Run=game:GetService("RunService")
 local Physics=game:GetService("PhysicsService")
 local R={}
 local folder=Instance.new("Folder"); folder.Name="CityRushRemotes"; folder.Parent=RS
-for _,name in ipairs({"Action","Input","State","Profile","Toast","Open"}) do
+for _,name in ipairs({"Action","State","Profile","Toast","Open"}) do
     local r=Instance.new("RemoteEvent"); r.Name=name; r.Parent=folder; R[name]=r
 end
 for _,name in ipairs({"RequestProfile","RequestTop","RequestSocial","RequestRace"}) do
@@ -53,7 +53,6 @@ R.RequestRace.OnServerInvoke=function(p)
     if limited(p,"race",1) then return nil end
     return race:Status(p)
 end
-R.Input.OnServerEvent:Connect(function(p,a,b,c) ride:Input(p,a,b,c) end)
 R.Action.OnServerEvent:Connect(function(p,action,value,extra)
     if type(action)~="string" or limited(p,"action",.2) or not data:Get(p) then return end
     if action=="Start" then
@@ -122,3 +121,17 @@ game:BindToClose(function()
     repeat task.wait(.1) until left==0 or os.clock()>endAt
 end)
 status.Value="Ready"
+task.spawn(function()
+    local Toolbox=require(S.ToolboxBike)
+    if not Toolbox.Load() then return end
+    -- Rebuild only display geometry; active riders switch at their next spawn.
+    for _,container in ipairs({previews,lobby.root}) do
+        local originals=container:GetDescendants()
+        for _,model in ipairs(originals) do
+            if model:IsA("Model") and model:GetAttribute("DisplayFrame") and model:GetAttribute("BikeName") then
+                local replacement=Bike.Build(model.Parent,model:GetAttribute("BikeName"),model:GetAttribute("Level") or 1,model:GetAttribute("DisplayFrame"),false)
+                replacement.Name=model.Name; model:Destroy()
+            end
+        end
+    end
+end)

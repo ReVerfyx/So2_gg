@@ -1,12 +1,10 @@
 local Players=game:GetService("Players")
 local RS=game:GetService("ReplicatedStorage")
-local UIS=game:GetService("UserInputService")
 local Run=game:GetService("RunService")
 local Tween=game:GetService("TweenService")
 local Sound=game:GetService("SoundService")
 local player=Players.LocalPlayer
 local Config=require(RS:WaitForChild("Shared"):WaitForChild("Config"))
-local Courses=require(RS.Shared.Courses)
 local R=RS:WaitForChild("CityRushRemotes")
 local profile=nil
 local current=nil
@@ -44,7 +42,7 @@ local shade=make("Frame",gui,{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.
 local panel=make("Frame",shade,{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.49),Size=UDim2.new(1,-28,1,-100),BackgroundColor3=colors.panel,BorderSizePixel=0,ZIndex=11})
 round(panel,20); make("UISizeConstraint",panel,{MaxSize=Vector2.new(800,650),MinSize=Vector2.new(260,200)})
 local title=text(panel,"",25); title.Position=UDim2.fromOffset(22,15); title.Size=UDim2.new(1,-85,0,35); title.ZIndex=12; title.Font=Enum.Font.GothamBlack
-local close=button(panel,"×",function() shade.Visible=false; current=nil; requestVersion+=1 end,colors.muted)
+local close=button(panel,"×",function() shade.Visible=false; current=nil; requestVersion+=1; controls:Enable() end,colors.muted)
 close.Size=UDim2.fromOffset(38,38); close.Position=UDim2.new(1,-54,0,14); close.ZIndex=12
 local list=make("ScrollingFrame",panel,{Position=UDim2.fromOffset(16,63),Size=UDim2.new(1,-32,1,-79),BackgroundTransparency=1,BorderSizePixel=0,
     ScrollBarThickness=3,ScrollBarImageColor3=colors.mint,AutomaticCanvasSize=Enum.AutomaticSize.Y,CanvasSize=UDim2.new(),ZIndex=12})
@@ -118,7 +116,7 @@ local function bikes()
         local c=card(194)
         local n=line(c,info.displayName,12,16,info.color); n.Size=UDim2.new(1,-138,0,48)
         local levelText=line(c,"LEVEL "..level.." / "..Config.BIKE_MAX_LEVEL,60,11,colors.muted); levelText.Size=UDim2.new(1,-130,0,24)
-        line(c,string.format("Скорость %d  ·  Разгон %d  ·  Руль %.1f",info.speed,info.acceleration,info.handling),94,12)
+        line(c,string.format("Скорость %d  ·  Штатный прыжок Roblox",Config.GetBikeStats(name,level).speed),94,12)
         preview(c,name)
         local selected=profile.equippedBike==name
         action(c,selected and "ВЫБРАН" or (owned and "ВЫБРАТЬ" or tostring(info.price).." COINS"),function() R.Action:FireServer("Select",name) end,16,139,selected and colors.muted or colors.mint)
@@ -151,10 +149,21 @@ open=function(page)
     if not profile then notify("Загружаем гараж…"); return end
     requestVersion+=1; local version=requestVersion
     current=page; shade.Visible=true; clear()
+    if player:GetAttribute("Riding") then controls:Disable() end
     if page=="Worlds" then worlds()
     elseif page=="Bikes" then bikes()
     elseif page=="Daily" then daily()
     elseif page=="Settings" then settings()
+    elseif page=="RideMenu" then
+        title.Text="ЗАЕЗД"
+        local c=card(115)
+        line(c,"Таймер заезда продолжает идти",8,14,colors.muted)
+        action(c,"ЧЕКПОИНТ",function()
+            R.Action:FireServer("Retry"); shade.Visible=false; current=nil; controls:Enable()
+        end,16,55,colors.white)
+        action(c,"В ГАРАЖ",function()
+            R.Action:FireServer("Home"); shade.Visible=false; current=nil; controls:Enable()
+        end,153,55,colors.muted)
     elseif page=="Social" or page=="Top" or page=="Race" then
         title.Text=page=="Social" and "BIKE DISTRICT" or (page=="Top" and "GLOBAL RIDERS" or "RACE CLUB")
         line(card(60),"Загрузка…",15,15,colors.muted)
@@ -197,36 +206,30 @@ for _,item in ipairs({{"ЕХАТЬ","Worlds"},{"БАЙКИ","Bikes"},{"ГАРА�
     local page=item[2]; local b=button(dock,item[1],function() open(page) end,page=="Worlds" and colors.mint or colors.card)
     b.Size=UDim2.new(1/6,-8,0,40); b.TextSize=11; if page~="Worlds" then b.TextColor3=colors.white end
 end
-local hud=make("Frame",gui,{Position=UDim2.fromOffset(18,82),Size=UDim2.new(1,-36,0,80),BackgroundColor3=colors.ink,BorderSizePixel=0,Visible=false})
-round(hud,15)
-local stageText=text(hud,"",17); stageText.Position=UDim2.fromOffset(14,6); stageText.Size=UDim2.new(.68,0,0,24)
-local timer=text(hud,"",18,colors.mint); timer.Position=UDim2.new(.7,0,0,8); timer.Size=UDim2.new(.3,-14,0,24); timer.TextXAlignment=Enum.TextXAlignment.Right
-local progress=make("Frame",hud,{Position=UDim2.new(0,14,1,-20),Size=UDim2.new(1,-28,0,5),BorderSizePixel=0,BackgroundColor3=colors.card}); round(progress,3)
+-- Race UI stays in the top safe area. The centre and both lower control zones are empty.
+local hud=make("Frame",gui,{AnchorPoint=Vector2.new(.5,0),Position=UDim2.new(.5,0,0,6),Size=UDim2.new(1,-112,0,38),BackgroundColor3=colors.ink,BackgroundTransparency=.22,BorderSizePixel=0,Visible=false})
+round(hud,9)
+make("UISizeConstraint",hud,{MaxSize=Vector2.new(350,38),MinSize=Vector2.new(180,38)})
+local stageText=text(hud,"",12); stageText.Position=UDim2.fromOffset(9,3); stageText.Size=UDim2.new(.5,-9,0,23)
+local timer=text(hud,"",12,colors.mint); timer.Position=UDim2.new(.5,0,0,3); timer.Size=UDim2.new(.5,-9,0,23); timer.TextXAlignment=Enum.TextXAlignment.Right
+local progress=make("Frame",hud,{Position=UDim2.new(0,9,1,-7),Size=UDim2.new(1,-18,0,3),BorderSizePixel=0,BackgroundColor3=colors.card}); round(progress,3)
 local fill=make("Frame",progress,{Size=UDim2.fromScale(0,1),BorderSizePixel=0,BackgroundColor3=colors.mint}); round(fill,3)
-local stageName=text(hud,"",11,colors.muted); stageName.Position=UDim2.fromOffset(14,32); stageName.Size=UDim2.new(1,-28,0,20)
-local rideBar=make("Frame",gui,{AnchorPoint=Vector2.new(.5,1),Position=UDim2.new(.5,0,1,-12),Size=UDim2.fromOffset(286,48),BackgroundTransparency=1,Visible=false})
-local retry=button(rideBar,"ЧЕКПОИНТ",function() R.Action:FireServer("Retry") end,colors.white)
-local home=button(rideBar,"В ГАРАЖ",function() R.Action:FireServer("Home") end,colors.muted); home.Position=UDim2.fromOffset(145,0)
-local jumpPressed=false; local brakePressed=false; local touchButtons={}
-local function touchButton(label,x,fnDown,fnUp)
-    local b=button(gui,label,function() end,colors.white); b.AnchorPoint=Vector2.new(1,1); b.Position=UDim2.new(1,x,1,-92); b.Size=UDim2.fromOffset(86,65); b.Visible=false
-    b.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then fnDown() end end)
-    b.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then fnUp() end end)
-    table.insert(touchButtons,b)
-end
-touchButton("ПРЫЖОК",-18,function() jumpPressed=true end,function() jumpPressed=false end)
-touchButton("ТОРМОЗ",-112,function() brakePressed=true end,function() brakePressed=false end)
-UIS.JumpRequest:Connect(function() jumpPressed=true; task.delay(.12,function() jumpPressed=false end) end)
-UIS.WindowFocusReleased:Connect(function() jumpPressed=false; brakePressed=false; R.Input:FireServer(0,0,false) end)
+local rideMenu=button(gui,"•••",function() open("RideMenu") end,colors.ink)
+rideMenu.TextColor3=colors.white; rideMenu.AnchorPoint=Vector2.new(1,0); rideMenu.Position=UDim2.new(1,-7,0,6)
+rideMenu.Size=UDim2.fromOffset(44,38); rideMenu.Visible=false
+local checkpointFlashUntil=0
 local function riding()
     local on=player:GetAttribute("Riding")==true
-    hud.Visible=on; rideBar.Visible=on; dock.Visible=not on
-    for _,b in ipairs(touchButtons) do b.Visible=on and UIS.TouchEnabled end
-    if on then shade.Visible=false; current=nil; camera.CameraType=Enum.CameraType.Scriptable
-    else
-        camera.CameraType=Enum.CameraType.Custom; camera.FieldOfView=70
-        local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid"); if h then camera.CameraSubject=h; h:SetStateEnabled(Enum.HumanoidStateType.Jumping,true) end
-    end
+    hud.Visible=on; rideMenu.Visible=on; dock.Visible=not on; top.Visible=not on
+    controls:Enable()
+    if on then
+        shade.Visible=false; current=nil; toast.Visible=false
+        toast.Position=UDim2.new(.5,0,0,95)
+    else toast.Position=UDim2.new(.5,0,1,-80) end
+    -- Keep Roblox's camera orbit, pinch zoom, thumbstick and jump button intact.
+    camera.CameraType=Enum.CameraType.Custom; camera.FieldOfView=70
+    local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if h then camera.CameraSubject=h end
 end
 player:GetAttributeChangedSignal("Riding"):Connect(riding)
 R.Toast.OnClientEvent:Connect(notify)
@@ -242,7 +245,7 @@ end
 R.Profile.OnClientEvent:Connect(applyProfile)
 R.State.OnClientEvent:Connect(function(state)
     if state.kind=="Checkpoint" then
-        notify("CHECKPOINT "..state.stage.." / 12")
+        checkpointFlashUntil=os.clock()+1.2
         if not (profile and profile.settings.reducedMotion) then
             fill.BackgroundColor3=colors.white; Tween:Create(fill,TweenInfo.new(.5),{BackgroundColor3=colors.mint}):Play()
         end
@@ -257,8 +260,7 @@ R.State.OnClientEvent:Connect(function(state)
         action(c,"МИРЫ",function() open("Worlds") end,153,178,colors.white)
     end
 end)
-local send=0
-Run.RenderStepped:Connect(function(dt)
+Run.RenderStepped:Connect(function()
     if current=="Race" and shade.Visible then
         for _,x in ipairs(list:GetDescendants()) do
             local t=x:GetAttribute("RaceTime")
@@ -266,33 +268,8 @@ Run.RenderStepped:Connect(function(dt)
         end
     end
     if not player:GetAttribute("Riding") then return end
-    local h=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    -- Native Roblox thumbstick, keyboard and gamepad all feed the same input path.
-    local move=controls:GetMoveVector()
-    local throttle=brakePressed and 0 or math.clamp(-move.Z,-1,1)
-    local steer=math.clamp(move.X,-1,1)
-    if UIS:GetFocusedTextBox() then throttle=0; steer=0 end
-    send+=dt
-    if send>=.05 then send=0; R.Input:FireServer(throttle,steer,jumpPressed or UIS:IsKeyDown(Enum.KeyCode.Space)) end
-    if h then h.Jump=false; h:SetStateEnabled(Enum.HumanoidStateType.Jumping,false) end
-    local seat=h and h.SeatPart
-    local frame=seat and seat.CFrame or root.CFrame
-    local dir=Vector3.new(frame.LookVector.X,0,frame.LookVector.Z)
-    if dir.Magnitude<.01 then dir=Vector3.new(0,0,-1) else dir=dir.Unit end
-    local target=root.Position+Vector3.new(0,2,0)
-    local desired=target-dir*17+Vector3.new(0,8,0)
-    local params=RaycastParams.new(); params.FilterDescendantsInstances={player.Character,workspace:FindFirstChild("ActiveBikes")}; params.RespectCanCollide=true
-    local hit=workspace:Raycast(target,desired-target,params)
-    if hit then desired=hit.Position+hit.Normal*.7 end
-    local cf=CFrame.lookAt(desired,target+dir*4)
-    local reduced=profile and profile.settings.reducedMotion
-    camera.CFrame=camera.CFrame:Lerp(cf,1-math.exp(-dt*(reduced and 14 or 6)))
-    camera.FieldOfView=reduced and 70 or 70+math.min(root.AssemblyLinearVelocity.Magnitude/8,6)
-    local world=player:GetAttribute("World") or 1; local cp=player:GetAttribute("Checkpoint") or 0
-    stageText.Text=Config.WORLDS[world].name.." / "..math.min(cp+1,12).." из 12"
-    stageName.Text=Courses[Config.WORLDS[world].id][math.min(cp+1,12)].name
+    local cp=player:GetAttribute("Checkpoint") or 0
+    stageText.Text=os.clock()<checkpointFlashUntil and "СОХРАНЕНО" or string.format("%d / 12  ·  %d%%",math.min(cp+1,12),math.floor(cp/12*100))
     local elapsed=workspace:GetServerTimeNow()-(player:GetAttribute("RunStart") or workspace:GetServerTimeNow())
     timer.Text=elapsed<0 and tostring(math.ceil(-elapsed)) or string.format("%02d:%05.2f",math.floor(elapsed/60),elapsed%60)
     fill.Size=UDim2.fromScale(cp/12,1)

@@ -1,13 +1,17 @@
 local Config=require(game:GetService("ReplicatedStorage").Shared.Config)
 local A=require(script.Parent.Art)
+local Toolbox=require(script.Parent.ToolboxBike)
 local Bike={}
 local function weld(part,root)
     part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false; part.Massless=true
     local w=Instance.new("WeldConstraint"); w.Part0=root; w.Part1=part; w.Parent=part
 end
 function Bike.Build(parent,name,level,cf,ride)
+    local imported=Toolbox.Clone(parent,name,level,cf)
+    if imported then return imported end
     local info=Config.BIKES[name] or Config.BIKES.BMX
     local m=A.model(parent,ride and "RideBike" or "DisplayBike")
+    m:SetAttribute("BikeName",name); m:SetAttribute("Level",level); m:SetAttribute("DisplayFrame",cf)
     local chassis=A.part(m,"Chassis",Vector3.new(1.5,1.8,4.8),cf*CFrame.new(0,-.45,0),A.ink,nil,ride)
     chassis.Transparency=1; m.PrimaryPart=chassis
     local tubeParent=m
@@ -50,26 +54,46 @@ function Bike.Build(parent,name,level,cf,ride)
         end
         tube("Axle",v(-.4,0,z),v(.4,0,z),.23,info.accent)
     end
-    tubeParent=m
-    if not ride then return m end
-    for _,part in ipairs(m:GetChildren()) do if part:IsA("BasePart") and part~=chassis then weld(part,chassis) end end
-    for _,wheel in ipairs(wheels) do
-        local pivot=wheel.PrimaryPart
-        for _,part in ipairs(wheel:GetChildren()) do if part:IsA("BasePart") and part~=pivot then weld(part,pivot) end end
-        pivot.Anchored=false; pivot.Massless=true
-        local motor=Instance.new("Motor6D"); motor.Name="WheelMotor"; motor.Part0=chassis; motor.Part1=pivot
-        motor.C0=chassis.CFrame:ToObjectSpace(pivot.CFrame); motor.Parent=pivot
+    return m
+end
+function Bike.Attach(character,name,level)
+    local h=character:FindFirstChildOfClass("Humanoid")
+    local root=character:FindFirstChild("HumanoidRootPart")
+    if not h or not root then return nil end
+    -- Bike origin is its wheel axle. Match wheel bottoms to the character's floor height.
+    local standingHeight=h.HipHeight+root.Size.Y/2
+    if h.RigType==Enum.HumanoidRigType.R6 then
+        local leg=character:FindFirstChild("Left Leg")
+        standingHeight+=leg and leg.Size.Y or 2
     end
-    local seat=Instance.new("Seat"); seat.Name="RiderSeat"; seat.Size=v(1,.25,1)
-    seat.CFrame=cf*CFrame.new(0,1.85,.7); seat.Transparency=1; seat.Parent=m; weld(seat,chassis)
-    chassis.Anchored=false; chassis.CanCollide=true; chassis.CanQuery=true; chassis.Massless=false
-    chassis.CustomPhysicalProperties=PhysicalProperties.new(2,.3,0,1,1)
-    local attachment=Instance.new("Attachment"); attachment.Parent=chassis
-    local align=Instance.new("AlignOrientation"); align.Attachment0=attachment; align.Mode=Enum.OrientationAlignmentMode.OneAttachment
-    align.MaxTorque=90000; align.Responsiveness=18; align.CFrame=cf.Rotation; align.Parent=chassis
-    chassis:SetNetworkOwner(nil)
-    game:GetService("CollectionService"):AddTag(m,"CityBike")
-    m:SetAttribute("BikeName",name); m:SetAttribute("Level",level)
-    return m,seat,align
+    local radius=name=="Trail" and 1.5 or 1.35
+    local model=Bike.Build(character,name,level,root.CFrame*CFrame.new(0,-standingHeight+radius,0),false)
+    model.Name="RideBike"
+    local chassis=model.PrimaryPart
+    local rotating={}
+    for _,wheelName in ipairs({"FrontWheel","RearWheel"}) do
+        local wheel=model:FindFirstChild(wheelName)
+        if wheel and wheel:IsA("Model") and wheel.PrimaryPart then
+            local pivot=wheel.PrimaryPart
+            for _,part in ipairs(wheel:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    rotating[part]=true
+                    if part~=pivot then weld(part,pivot) end
+                end
+            end
+            local motor=Instance.new("Motor6D"); motor.Name="WheelMotor"; motor.Part0=chassis; motor.Part1=pivot
+            motor.C0=chassis.CFrame:ToObjectSpace(pivot.CFrame); motor.Parent=pivot
+        end
+    end
+    for _,part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if part~=chassis and not rotating[part] then weld(part,chassis) end
+            part.Anchored=false; part.CanCollide=false; part.CanTouch=false; part.CanQuery=false; part.Massless=true
+            part.CollisionGroup="CityBikes"
+        end
+    end
+    weld(chassis,root)
+    game:GetService("CollectionService"):AddTag(model,"CityBike")
+    return model
 end
 return Bike

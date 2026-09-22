@@ -45,6 +45,7 @@ script=prelude
 script+=module('Config','src/ReplicatedStorage/Shared/Config.lua')
 script+=module('Courses','src/ReplicatedStorage/Shared/Courses.lua')
 script+=module('Economy','src/ReplicatedStorage/Shared/Economy.lua')
+script+=module('RideRules','src/ReplicatedStorage/Shared/RideRules.lua')
 script+=module('Data','src/ServerScriptService/Services/DataService.lua',[
     ('local Config=require(Shared.Config)',''),('local Economy=require(Shared.Economy)','')])
 script+=(ROOT/'tests/rules.luau').read_text()

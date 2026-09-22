@@ -26,6 +26,12 @@
         "Gravity": 140,
         "FallenPartsDestroyHeight": -200
       }
+    },
+    "AssetService": {
+      "$className": "AssetService",
+      "$properties": {
+        "AllowInsertFreeAssets": true
+      }
     }
   }
 }
