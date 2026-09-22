@@ -19,6 +19,7 @@ end
 function DataService.new()
     local self=setmetatable({},DataService)
     self.store=DataStoreService:GetDataStore("CityRush_PlayerData_v2")
+    self.legacyStore=DataStoreService:GetDataStore("CityRush_PlayerData_v1")
     self.ratingStore=DataStoreService:GetOrderedDataStore("CityRush_Rating_v1")
     self.profiles={}
     return self
@@ -30,7 +31,13 @@ function DataService:Load(player)
         return self.store:GetAsync("u_"..player.UserId)
     end)
 
-    if ok and type(saved)=="table" then
+    if ok and saved==nil then
+        pcall(function()
+            saved=self.legacyStore:GetAsync("u_"..player.UserId)
+        end)
+    end
+
+    if type(saved)=="table" then
         profile.coins=tonumber(saved.coins) or 0
         profile.rating=tonumber(saved.rating) or 0
         profile.best=tonumber(saved.best) or 0
