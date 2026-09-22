@@ -1,19 +1,37 @@
-# 2015: CODE ROT
+# CITY RUSH
 
-Roblox campaign project built with Rojo.
+Полный ребут старого проекта.
 
-- Start Place ID: `79281925900541`
-- 10 chapters
-- World mutation pulse: every 180 seconds
-- Campaign timer total: 450 minutes (7.5 hours)
-- Player-built parts can return as corrupted geometry in later chapters
-- Five memory fragments, memorial sequence, Rose of Memory revive
+Вертикальная Roblox runner-игра в духе lane runners:
+- портретная ориентация на телефоне;
+- бесконечная 3-полосная трасса;
+- свайп влево/вправо;
+- свайп вверх — прыжок;
+- свайп вниз — подкат;
+- препятствия, автобусы и ворота;
+- монеты;
+- ускорение по мере дистанции;
+- гараж с BMX / Street / Neon / Carbon;
+- постоянные Coins / Rating / Best через DataStore;
+- глобальный рейтинг через OrderedDataStore;
+- яркий стилизованный город с динамически достраиваемой трассой;
+- управление с клавиатуры для теста на ПК.
 
-## Build
-GitHub Actions builds `build/2015-CODE-ROT.rbxlx` on every push to `main`.
-You can also run the workflow manually from the Actions tab.
+## Управление
 
-Automatic upload to the Roblox place is intentionally not enabled until a Roblox Open Cloud API key and Universe ID are configured as GitHub secrets.
+Mobile:
+- swipe left/right — смена полосы
+- swipe up — jump
+- swipe down — slide
 
+PC:
+- A/D или стрелки — полосы
+- W/Space/Up — jump
+- S/Down — slide
 
-Publishing target: Universe `8860447734`, Place `79281925900541`.
+## Roblox publishing
+
+Universe: 8860447734
+Start Place: 79281925900541
+
+GitHub Actions собирает Rojo place и публикует его через `ROBLOX_API_KEY`.

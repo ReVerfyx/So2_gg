@@ -1,4 +1,4 @@
-name: Build and Publish Roblox Place
+name: Build and Publish CITY RUSH
 
 on:
   workflow_dispatch:
@@ -30,26 +30,15 @@ jobs:
       - name: Build place
         run: |
           mkdir -p build
-          rojo build default.project.json -o build/2015-CODE-ROT.rbxlx
+          rojo build default.project.json -o build/CITY-RUSH.rbxlx
 
       - name: Upload RBXLX
         uses: actions/upload-artifact@v4
         with:
-          name: 2015-CODE-ROT-place-${{ env.START_PLACE_ID }}
-          path: build/2015-CODE-ROT.rbxlx
+          name: CITY-RUSH-place-${{ env.START_PLACE_ID }}
+          path: build/CITY-RUSH.rbxlx
           if-no-files-found: error
           retention-days: 14
-
-      - name: Check Roblox API key scopes
-        env:
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
-        run: |
-          jq -n --arg key "$ROBLOX_API_KEY" '{apiKey:$key}' \
-            | curl --silent --show-error --fail-with-body \
-                --request POST "https://apis.roblox.com/api-keys/v1/introspect" \
-                --header "Content-Type: application/json" \
-                --data-binary @- \
-            | jq '{enabled,expired,scopes}'
 
       - name: Publish to Roblox
         env:
@@ -59,4 +48,4 @@ jobs:
             "https://apis.roblox.com/universes/v1/${UNIVERSE_ID}/places/${START_PLACE_ID}/versions?versionType=Published" \
             --header "x-api-key: ${ROBLOX_API_KEY}" \
             --header "Content-Type: application/xml" \
-            --data-binary "@build/2015-CODE-ROT.rbxlx"
+            --data-binary "@build/CITY-RUSH.rbxlx"
