@@ -5,12 +5,20 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local R = ReplicatedStorage:WaitForChild("CityRushRemotes")
+local bootStatus = R:WaitForChild("BootStatus")
 local camera = workspace.CurrentCamera
 
-pcall(function()
-    player:WaitForChild("PlayerGui").ScreenOrientation = Enum.ScreenOrientation.Portrait
-end)
+local function forcePortrait()
+    pcall(function()
+        playerGui.ScreenOrientation = Enum.ScreenOrientation.Portrait
+    end)
+end
+
+forcePortrait()
+task.delay(1, forcePortrait)
+task.delay(3, forcePortrait)
 
 local lanes = {-8,0,8}
 local laneIndex = 2
@@ -25,7 +33,8 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "CityRushUI"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.DisplayOrder = 20
+gui.Parent = playerGui
 
 local function corner(obj,r)
     local c = Instance.new("UICorner")
@@ -84,6 +93,37 @@ local menu = Instance.new("Frame")
 menu.Size = UDim2.fromScale(1,1)
 menu.BackgroundTransparency = 1
 menu.Parent = gui
+
+local bootBanner = Instance.new("TextLabel")
+bootBanner.AnchorPoint = Vector2.new(.5,0)
+bootBanner.Position = UDim2.new(.5,0,0,8)
+bootBanner.Size = UDim2.new(.82,0,0,36)
+bootBanner.BackgroundColor3 = Color3.fromRGB(28,31,48)
+bootBanner.BackgroundTransparency = .08
+bootBanner.BorderSizePixel = 0
+bootBanner.TextColor3 = Color3.fromRGB(255,230,155)
+bootBanner.TextSize = 13
+bootBanner.Font = Enum.Font.GothamBold
+bootBanner.Text = "CITY RUSH • загрузка..."
+corner(bootBanner,12)
+stroke(bootBanner,.72)
+bootBanner.Parent = gui
+
+local function refreshBoot()
+    local status = bootStatus.Value
+    if status == "READY" then
+        bootBanner.Visible = false
+    elseif string.find(status,"ERROR",1,true) then
+        bootBanner.Visible = true
+        bootBanner.Text = "ОШИБКА ЗАПУСКА: " .. status
+        bootBanner.TextColor3 = Color3.fromRGB(255,130,130)
+    else
+        bootBanner.Visible = true
+        bootBanner.Text = "CITY RUSH • " .. status
+    end
+end
+bootStatus:GetPropertyChangedSignal("Value"):Connect(refreshBoot)
+refreshBoot()
 
 local titleShadow = label(menu,"CITY\nRUSH",UDim2.new(.5,-150,.08,6),UDim2.fromOffset(300,150),54,true)
 titleShadow.TextColor3 = Color3.fromRGB(63,48,88)
